@@ -1,0 +1,86 @@
+:root {
+  /* Color Palette (FIFA-inspired dark premium theme with gold and energetic accents) */
+  --bg-primary: #070514;
+  --bg-secondary: #0d0a27;
+  --bg-tertiary: #16123d;
+  
+  --glass-bg: rgba(13, 10, 39, 0.6);
+  --glass-bg-hover: rgba(22, 18, 61, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-hover: rgba(255, 255, 255, 0.15);
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  /* Primary & Accent colors */
+  --color-primary: #8b5cf6; /* Vibrant violet */
+  --color-primary-glow: rgba(139, 92, 246, 0.35);
+  
+  --color-accent: #eab308; /* Metallic/Vibrant gold for tournament premium theme */
+  --color-accent-glow: rgba(234, 179, 8, 0.25);
+  
+  --color-success: #10b981; /* Mint green */
+  --color-success-glow: rgba(16, 185, 129, 0.2);
+  
+  --color-warning: #f97316; /* Amber orange */
+  --color-warning-glow: rgba(249, 115, 22, 0.2);
+  
+  --color-danger: #ef4444; /* Scarlet red */
+  --color-danger-glow: rgba(239, 68, 68, 0.2);
+
+  --color-info: #06b6d4; /* Neon cyan */
+  --color-info-glow: rgba(6, 182, 212, 0.2);
+
+  /* Fonts */
+  --font-header: 'Outfit', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  /* Card and border shadows */
+  --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 20px -4px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 12px 40px -10px rgba(0, 0, 0, 0.9);
+  --shadow-glow-primary: 0 0 25px var(--color-primary-glow);
+  --shadow-glow-accent: 0 0 25px var(--color-accent-glow);
+
+  /* Borders & Radius */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-round: 9999px;
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-xxl: 48px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.5s ease;
+}
+
+/* Light / High-Contrast Accessibility Mode Overrides */
+[data-theme="high-contrast"] {
+  --bg-primary: #000000;
+  --bg-secondary: #121212;
+  --bg-tertiary: #222222;
+  
+  --glass-bg: #121212;
+  --glass-bg-hover: #1e1e1e;
+  --glass-border: #ffffff;
+  --glass-border-hover: #ffffff;
+  
+  --text-primary: #ffffff;
+  --text-secondary: #f1f5f9;
+  --text-muted: #cbd5e1;
+  
+  --color-primary: #d8b4fe; /* Brighter purple */
+  --color-accent: #fde047; /* Brighter gold */
+  
+  --shadow-glow-primary: 0 0 15px rgba(255, 255, 255, 0.8);
+  --shadow-glow-accent: 0 0 15px rgba(255, 255, 255, 0.8);
+}
