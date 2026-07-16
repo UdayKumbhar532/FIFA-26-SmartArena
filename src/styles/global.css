@@ -1,12 +1,17 @@
 @import './variables.css';
 
-/* Basic Resets */
+/* =========================================================================
+   RESET
+   ========================================================================= */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+/* =========================================================================
+   BASE STYLES
+   ========================================================================= */
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
@@ -24,7 +29,49 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--text-primary);
 }
 
-/* Custom Scrollbars */
+/* =========================================================================
+   ACCESSIBILITY — SKIP LINK
+   Allows keyboard users to bypass navigation and jump straight to content.
+   ========================================================================= */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: var(--spacing-md);
+  z-index: 9999;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 10px 20px;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  text-decoration: none;
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* =========================================================================
+   ACCESSIBILITY — SCREEN-READER ONLY
+   ========================================================================= */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* =========================================================================
+   CUSTOM SCROLLBARS
+   ========================================================================= */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -41,7 +88,9 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--color-primary);
 }
 
-/* Layout Utilities */
+/* =========================================================================
+   LAYOUT UTILITIES
+   ========================================================================= */
 .app-container {
   display: flex;
   flex-direction: column;
@@ -57,7 +106,9 @@ h1, h2, h3, h4, h5, h6 {
   margin: 0 auto;
 }
 
-/* Glassmorphism Cards */
+/* =========================================================================
+   GLASSMORPHISM CARDS
+   ========================================================================= */
 .glass-panel {
   background: var(--glass-bg);
   backdrop-filter: blur(16px);
@@ -66,7 +117,10 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: var(--radius-md);
   padding: var(--spacing-lg);
   box-shadow: var(--shadow-md);
-  transition: border-color var(--transition-fast), background-color var(--transition-fast), transform var(--transition-normal);
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast),
+    transform var(--transition-normal);
 }
 
 .glass-panel:hover {
@@ -78,7 +132,9 @@ h1, h2, h3, h4, h5, h6 {
   transform: scale(0.98);
 }
 
-/* Inputs & Form Elements */
+/* =========================================================================
+   INPUTS & FORM ELEMENTS
+   ========================================================================= */
 .input-field {
   width: 100%;
   padding: 12px 16px;
@@ -89,13 +145,16 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-body);
   font-size: 14px;
   transition: all var(--transition-fast);
+  /* Retain outline for focus-visible so keyboard users see focus rings.
+     We only hide the default outline and replace it with our custom ring. */
   outline: none;
 }
 
-.input-field:focus {
+/* Visible focus ring — WCAG 2.1 SC 2.4.7 */
+.input-field:focus-visible {
   border-color: var(--color-primary);
   background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.2), 0 0 0 3px rgba(139, 92, 246, 0.4);
 }
 
 .input-field::placeholder {
@@ -112,7 +171,9 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 0.05em;
 }
 
-/* Buttons */
+/* =========================================================================
+   BUTTONS
+   ========================================================================= */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -128,6 +189,12 @@ h1, h2, h3, h4, h5, h6 {
   transition: all var(--transition-fast);
   text-decoration: none;
   white-space: nowrap;
+}
+
+/* Visible focus rings on all buttons — WCAG 2.4.7 */
+.btn:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
 }
 
 .btn-primary {
@@ -181,16 +248,9 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: none !important;
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
+/* =========================================================================
+   BADGES
+   ========================================================================= */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -204,23 +264,80 @@ h1, h2, h3, h4, h5, h6 {
 
 .badge-success { background: var(--color-success-glow); color: var(--color-success); border: 1px solid rgba(16, 185, 129, 0.2); }
 .badge-warning { background: var(--color-warning-glow); color: var(--color-warning); border: 1px solid rgba(249, 115, 22, 0.2); }
-.badge-danger { background: var(--color-danger-glow); color: var(--color-danger); border: 1px solid rgba(239, 68, 68, 0.2); }
-.badge-info { background: var(--color-info-glow); color: var(--color-info); border: 1px solid rgba(6, 182, 212, 0.2); }
+.badge-danger  { background: var(--color-danger-glow);  color: var(--color-danger);  border: 1px solid rgba(239, 68, 68, 0.2); }
+.badge-info    { background: var(--color-info-glow);    color: var(--color-info);    border: 1px solid rgba(6, 182, 212, 0.2); }
 
-/* Accessible Reader-Only Class */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
+/* =========================================================================
+   ANIMATIONS
+   ========================================================================= */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Sliding Navigation Menu Drawer & Backdrop Overlay */
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes pulseEmergency {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.85; }
+}
+
+/* Badge pulse for Critical priority incidents */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+/* SVG wayfinding path dash animation */
+@keyframes dash {
+  to { stroke-dashoffset: -1000; }
+}
+
+/* Target glow when navigating to a section */
+@keyframes highlightBorderGlow {
+  0% {
+    box-shadow: 0 0 0 0px rgba(139, 92, 246, 0), var(--shadow-md);
+    border-color: var(--color-primary);
+  }
+  20% {
+    box-shadow: 0 0 0 6px var(--color-primary-glow), 0 0 20px var(--color-primary-glow), var(--shadow-md);
+    border-color: var(--color-primary);
+  }
+  100% {
+    box-shadow: 0 0 0 0px rgba(139, 92, 246, 0), var(--shadow-md);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.highlight-glow {
+  animation: highlightBorderGlow 2.5s ease-out forwards;
+}
+
+/* =========================================================================
+   ACCESSIBILITY — REDUCED MOTION
+   Respects OS-level "reduce motion" preference (WCAG 2.3.3).
+   Disables decorative animations while preserving functional transitions.
+   ========================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =========================================================================
+   NAVIGATION DRAWER & BACKDROP OVERLAY
+   ========================================================================= */
 .menu-overlay {
   position: fixed;
   top: 0;
@@ -296,32 +413,20 @@ h1, h2, h3, h4, h5, h6 {
   transform: translateX(4px);
 }
 
+.menu-drawer-item:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 .menu-drawer-item.active {
   background: var(--color-primary-glow);
   border-color: var(--color-primary);
   color: white;
 }
 
-/* Target Glow Highlight Animation */
-.highlight-glow {
-  animation: highlightBorderGlow 2.5s ease-out forwards;
-}
-
-@keyframes highlightBorderGlow {
-  0% {
-    box-shadow: 0 0 0 0px rgba(139, 92, 246, 0), var(--shadow-md);
-    border-color: var(--color-primary);
-  }
-  20% {
-    box-shadow: 0 0 0 6px var(--color-primary-glow), 0 0 20px var(--color-primary-glow), var(--shadow-md);
-    border-color: var(--color-primary);
-  }
-  100% {
-    box-shadow: 0 0 0 0px rgba(139, 92, 246, 0), var(--shadow-md);
-  }
-}
-
-/* Emergency Stop Dispatch Banner */
+/* =========================================================================
+   EMERGENCY STOP DISPATCH BANNER
+   ========================================================================= */
 .emergency-banner {
   background: linear-gradient(90deg, #b91c1c, #ef4444, #b91c1c);
   color: white;
@@ -340,14 +445,13 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 99;
 }
 
-@keyframes fadeInOverlay {
-  from { opacity: 0; }
-  to { opacity: 1; }
+/* =========================================================================
+   SVG MAP — KEYBOARD-INTERACTIVE NODES
+   Provides a visible focus ring on stadium map nodes when navigated
+   via keyboard (role="button" elements inside an SVG).
+   ========================================================================= */
+.map-node:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
-
-@keyframes pulseEmergency {
-  0% { opacity: 1; }
-  50% { opacity: 0.85; }
-  100% { opacity: 1; }
-}
-

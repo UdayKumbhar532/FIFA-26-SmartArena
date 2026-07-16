@@ -1,67 +1,144 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import type { ParsedIncident, RouteDetail } from '../types';
 
-// Interface definitions for AI parsing outputs
-export interface ParsedIncident {
-  category: 'Medical' | 'Safety' | 'Facilities' | 'Crowd' | 'Sustainability' | 'Other';
-  priority: 'Critical' | 'High' | 'Medium' | 'Low';
-  location: string;
-  description: string;
-  remediationSteps: string[];
-}
-
-export interface RouteDetail {
-  path: string[]; // Array of nodes (e.g. ['Gate A', 'Concession B', 'Section 104'])
-  accessibilityFriendly: boolean;
-  warnings: string[];
-  directions: string[];
-  estimatedTimeMin: number;
-}
+// Re-export shared types so existing imports from this module still work
+export type { ParsedIncident, RouteDetail };
 
 /**
  * API key baked in at build time from the .env file.
- * NEVER expose this constant in the UI — it is only used server-side in requests
- * that originate from the running local process or the built bundle.
+ * NEVER expose this constant in the UI — it is only used server-side in
+ * requests that originate from the running local process or the built bundle.
  * End users see no key input; the key is invisible in the browser UI.
  */
 const BAKED_API_KEY: string = import.meta.env.VITE_GEMINI_API_KEY ?? '';
 
 /**
- * Helper to initialize the Gemini model.
+ * Maximum number of characters accepted from user-supplied text before it is
+ * truncated. Guards against prompt-injection attacks that attempt to overflow
+ * the context window or inject hidden instructions.
+ */
+const MAX_PROMPT_CHARS = 500;
+
+/**
+ * Strips HTML tags and control characters from user input to prevent injection
+ * into LLM prompts, and enforces the character length cap.
+ *
+ * @param raw - Raw text from a form field or chat input.
+ * @returns Sanitised, length-capped plain text.
+ */
+function sanitiseInput(raw: string): string {
+  return raw
+    .replace(/<[^>]*>/g, '')          // strip HTML tags
+    .replace(/[\u0000-\u001F\u007F]/g, '') // strip non-printable control chars
+    .trim()
+    .slice(0, MAX_PROMPT_CHARS);
+}
+
+/**
+ * Runtime type guard for `ParsedIncident`.
+ * Validates that a value decoded from JSON has the expected shape before it is
+ * cast to the TypeScript type, preventing runtime errors from malformed LLM
+ * output.
+ */
+function isParsedIncident(value: unknown): value is ParsedIncident {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.category === 'string' &&
+    ['Medical', 'Safety', 'Facilities', 'Crowd', 'Sustainability', 'Other'].includes(v.category) &&
+    typeof v.priority === 'string' &&
+    ['Critical', 'High', 'Medium', 'Low'].includes(v.priority) &&
+    typeof v.location === 'string' &&
+    typeof v.description === 'string' &&
+    Array.isArray(v.remediationSteps) &&
+    (v.remediationSteps as unknown[]).every((s) => typeof s === 'string')
+  );
+}
+
+/**
+ * Runtime type guard for `RouteDetail`.
+ */
+function isRouteDetail(value: unknown): value is RouteDetail {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  return (
+    Array.isArray(v.path) &&
+    (v.path as unknown[]).every((p) => typeof p === 'string') &&
+    typeof v.accessibilityFriendly === 'boolean' &&
+    Array.isArray(v.warnings) &&
+    Array.isArray(v.directions) &&
+    typeof v.estimatedTimeMin === 'number'
+  );
+}
+
+/**
+ * Safely extracts and parses a JSON object from a raw LLM response string.
+ * Returns `null` if no valid JSON block is found.
+ */
+function extractJSON(text: string): unknown {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) return null;
+  try {
+    return JSON.parse(text.substring(start, end + 1));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Helper to initialise the Gemini model.
  * Prefers the baked env key; falls back to any key passed at runtime (e.g. tests).
+ * Returns `null` when no valid key is available, allowing callers to fall back
+ * gracefully to the offline simulator without throwing.
  */
 const getGeminiModel = (runtimeKey?: string) => {
   const key = runtimeKey?.trim() || BAKED_API_KEY;
+  // Guard against an explicitly empty key to avoid a silent Gemini SDK error
   if (!key) return null;
   try {
     const genAI = new GoogleGenerativeAI(key);
     // gemini-1.5-flash: fast, cost-effective for real-time operational commands
     return genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
   } catch (error) {
-    console.error('Failed to initialize Gemini Client:', error);
+    console.error('Failed to initialise Gemini client:', error);
     return null;
   }
 };
 
+// ---------------------------------------------------------------------------
+// 1. AI Chat — General fan queries
+// ---------------------------------------------------------------------------
+
 /**
- * 1. AI Chat for general fan queries.
+ * Sends a fan question to Gemini and returns a concise AI response.
+ * Falls back to the high-fidelity offline simulator when the key is absent or
+ * the network request fails.
+ *
+ * @param prompt - User's question text.
+ * @param context - Ambient context string (e.g. accessibility mode state).
+ * @param apiKey  - Optional override key (used in automated tests).
  */
 export async function chatWithAI(
   prompt: string,
   context: string,
-  apiKey?: string
+  apiKey?: string,
 ): Promise<string> {
+  const safePrompt = sanitiseInput(prompt);
+  const safeContext = sanitiseInput(context);
   const model = getGeminiModel(apiKey);
 
   if (model) {
     try {
       const systemInstruction = `
-        You are ArenaMind, the official AI assistant for the FIFA World Cup 2026. 
-        Your goal is to assist fans, volunteers, and staff with stadium navigation, transportation, accessibility, sustainability, and general tournament info.
-        Keep answers helpful, clear, and concise (under 4 sentences if possible). 
-        You have the following context about the stadium state: ${context}.
+        You are ArenaMind, the official AI assistant for the FIFA World Cup 2026.
+        Your goal is to assist fans, volunteers, and staff with stadium navigation,
+        transportation, accessibility, sustainability, and general tournament info.
+        Keep answers helpful, clear, and concise (under 4 sentences if possible).
+        You have the following context about the stadium state: ${safeContext}.
         If the user asks in a different language, respond in that language.
       `;
-      const result = await model.generateContent([systemInstruction, prompt]);
+      const result = await model.generateContent([systemInstruction, safePrompt]);
       return result.response.text();
     } catch (error) {
       console.warn('Real AI chat failed, falling back to simulator:', error);
@@ -69,23 +146,33 @@ export async function chatWithAI(
   }
 
   // High-fidelity local simulation fallback
-  return simulateChatResponse(prompt, context);
+  return simulateChatResponse(safePrompt, safeContext);
 }
 
+// ---------------------------------------------------------------------------
+// 2. Parse free-form staff incident reports
+// ---------------------------------------------------------------------------
+
 /**
- * 2. Parse free-form staff incident reports.
+ * Sends a raw staff dispatch report to Gemini for structured parsing.
+ * Falls back to the rule-based offline simulator when the API is unavailable.
+ *
+ * @param report - Free-form incident text entered by staff.
+ * @param apiKey - Optional override key (used in automated tests).
  */
 export async function parseIncidentReport(
   report: string,
-  apiKey?: string
+  apiKey?: string,
 ): Promise<ParsedIncident> {
+  const safeReport = sanitiseInput(report);
   const model = getGeminiModel(apiKey);
 
   if (model) {
     try {
       const prompt = `
-        Analyze the following stadium incident report. Extract details and return them strictly in JSON format.
-        Report: "${report}"
+        Analyse the following stadium incident report. Extract details and return
+        them strictly in JSON format with no additional text or markdown.
+        Report: "${safeReport}"
 
         JSON structure:
         {
@@ -95,7 +182,7 @@ export async function parseIncidentReport(
           "description": "clean summary of what happened",
           "remediationSteps": ["step 1", "step 2", ...]
         }
-        
+
         Rules:
         - Critical: Life safety, severe medical, active fight, major structural issues.
         - High: Minor medical, slippery surfaces, gate blockages, minor crowd congestions.
@@ -103,39 +190,50 @@ export async function parseIncidentReport(
         - Low: General enquiries, lost & found items.
       `;
       const result = await model.generateContent(prompt);
-      const text = result.response.text();
-      // Extract JSON from response (handling potential markdown formatting)
-      const cleanJSON = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
-      return JSON.parse(cleanJSON) as ParsedIncident;
+      const parsed = extractJSON(result.response.text());
+      if (isParsedIncident(parsed)) {
+        return parsed;
+      }
+      console.warn('Gemini returned unexpected incident schema; using simulator.');
     } catch (error) {
       console.warn('Real AI incident parsing failed, falling back to simulator:', error);
     }
   }
 
-  // Simulation fallback
-  return simulateIncidentParsing(report);
+  return simulateIncidentParsing(safeReport);
 }
 
+// ---------------------------------------------------------------------------
+// 3. Wayfinding routing assistant
+// ---------------------------------------------------------------------------
+
 /**
- * 3. Wayfinding routing assistant.
+ * Requests a navigational route from Gemini or the offline simulator.
+ *
+ * @param start             - Starting node name.
+ * @param destination       - Target node name.
+ * @param accessibilityMode - When true, prefer ramps/elevators.
+ * @param apiKey            - Optional override key (used in automated tests).
  */
 export async function getWayfindingRoute(
   start: string,
   destination: string,
   accessibilityMode: boolean,
-  apiKey?: string
+  apiKey?: string,
 ): Promise<RouteDetail> {
-  const model = getGeminiModel(apiKey);
+  const safeStart = sanitiseInput(start);
+  const safeDest  = sanitiseInput(destination);
+  const model     = getGeminiModel(apiKey);
 
   if (model) {
     try {
       const prompt = `
         Generate a navigational route inside a stadium.
-        Origin: "${start}"
-        Destination: "${destination}"
-        Accessibility Mode (Wheelchair friendly/Elevators preferred): ${accessibilityMode ? 'ON' : 'OFF'}
+        Origin: "${safeStart}"
+        Destination: "${safeDest}"
+        Accessibility Mode (wheelchair-friendly/elevators preferred): ${accessibilityMode ? 'ON' : 'OFF'}
 
-        Respond strictly with a JSON object matching this structure:
+        Respond strictly with a JSON object matching this structure, no markdown:
         {
           "path": ["node1", "node2", ...],
           "accessibilityFriendly": true/false,
@@ -145,26 +243,27 @@ export async function getWayfindingRoute(
         }
       `;
       const result = await model.generateContent(prompt);
-      const text = result.response.text();
-      const cleanJSON = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
-      return JSON.parse(cleanJSON) as RouteDetail;
+      const parsed = extractJSON(result.response.text());
+      if (isRouteDetail(parsed)) {
+        return parsed;
+      }
+      console.warn('Gemini returned unexpected route schema; using simulator.');
     } catch (error) {
       console.warn('Real AI routing failed, falling back to simulator:', error);
     }
   }
 
-  // Simulation fallback
-  return simulateRouteFinding(start, destination, accessibilityMode);
+  return simulateRouteFinding(safeStart, safeDest, accessibilityMode);
 }
 
-/* ==========================================
-   HIGH FIDELITY OFFLINE AI SIMULATOR
-   ========================================== */
+/* ==========================================================================
+   HIGH-FIDELITY OFFLINE AI SIMULATOR
+   ========================================================================== */
 
 function simulateChatResponse(prompt: string, context: string): string {
   const p = prompt.toLowerCase();
-  
-  // Multilingual Greetings / Detections
+
+  // Multilingual greetings
   if (p.includes('hola') || p.includes('buenos dias')) {
     return '¡Hola! Bienvenido al Estadio de la Copa Mundial de la FIFA 2026. Soy tu asistente ArenaMind. ¿En qué te puedo ayudar hoy?';
   }
@@ -195,7 +294,7 @@ function simulateChatResponse(prompt: string, context: string): string {
     return 'We have food courts located at Level 1 (near Section 105) and Level 2 (near Section 220). Vegetarian and vegan options (such as Plant-based tacos) are featured at GreenBites near Section 112. Water bottle refill stations are free and situated at every restroom corridor.';
   }
 
-  // Gate queries
+  // Gate/entry queries
   if (p.includes('gate') || p.includes('entry') || p.includes('entrance') || p.includes('ticket')) {
     return 'Gates open 3 hours prior to kickoff. Ensure your digital ticket is loaded in your mobile wallet. Security checks are at all gates; bag sizes are limited to 14cm x 19cm. Gate A generally has the lowest wait time currently.';
   }
@@ -205,24 +304,24 @@ function simulateChatResponse(prompt: string, context: string): string {
     return 'Lost and Found operations are centered at the Guest Services Hub near Section 101 (close to Gate A). If you have lost an item, please report it to any volunteer or submit a request here so our staff can check the database.';
   }
 
-  // Default response (analyzing context if available)
+  // Default response
   return `Welcome to the FIFA World Cup 2026 Smart Stadium portal! Currently, crowd levels are ${context.includes('congested') ? 'higher than average' : 'normal'}. Please let me know how I can help with stadium navigation, transportation, accessibility, or food selections.`;
 }
 
 function simulateIncidentParsing(report: string): ParsedIncident {
   const r = report.toLowerCase();
-  
+
   let category: ParsedIncident['category'] = 'Other';
   let priority: ParsedIncident['priority'] = 'Low';
   let location = 'Unknown Section';
-  let description = report;
+  const description = report;
 
-  // Extract location (e.g. section 104, gate B, concession 2)
-  const secMatch = report.match(/section\s*(\d+)/i);
+  // Extract location
+  const secMatch  = report.match(/section\s*(\d+)/i);
   const gateMatch = report.match(/gate\s*([a-gA-G]|\d+)/i);
   const concMatch = report.match(/concession\s*([a-zA-Z]|\d+)/i);
 
-  if (secMatch) location = `Section ${secMatch[1]}`;
+  if (secMatch)       location = `Section ${secMatch[1]}`;
   else if (gateMatch) location = `Gate ${gateMatch[1].toUpperCase()}`;
   else if (concMatch) location = `Concession ${concMatch[1].toUpperCase()}`;
 
@@ -246,6 +345,7 @@ function simulateIncidentParsing(report: string): ParsedIncident {
 
   // Generate remediation steps
   const steps: string[] = [];
+
   if (category === 'Medical') {
     if (priority === 'Critical') {
       steps.push('Dispatch Stadium Paramedic Response Unit immediately.');
@@ -282,26 +382,20 @@ function simulateIncidentParsing(report: string): ParsedIncident {
     steps.push('Coordinate with Guest Services for any general assistance.');
   }
 
-  return {
-    category,
-    priority,
-    location,
-    description,
-    remediationSteps: steps
-  };
+  return { category, priority, location, description, remediationSteps: steps };
 }
 
 function simulateRouteFinding(
   start: string,
   destination: string,
-  accessibilityMode: boolean
+  accessibilityMode: boolean,
 ): RouteDetail {
   const normStart = start.toUpperCase();
-  const normDest = destination.toUpperCase();
-  
-  let path = [start, 'Stairs Corridor A', 'Level 1 Concourse', destination];
+  const normDest  = destination.toUpperCase();
+
+  let path: string[]     = [start, 'Stairs Corridor A', 'Level 1 Concourse', destination];
   let warnings: string[] = [];
-  let directions: string[] = [];
+  let directions: string[];
   let estimatedTimeMin = 8;
 
   if (accessibilityMode) {
@@ -311,7 +405,7 @@ function simulateRouteFinding(
       `Exit ${start} and head toward Elevator Hub South.`,
       'Take Elevator 2 to Level 1 Concourse (voice guidance available).',
       'Follow the low-slope accessible ramp to Section 104.',
-      `Enter ${destination} via the flat-grade double door entrance.`
+      `Enter ${destination} via the flat-grade double door entrance.`,
     ];
     estimatedTimeMin = 12;
   } else {
@@ -319,11 +413,11 @@ function simulateRouteFinding(
       `Exit ${start} and turn left toward Stairs Corridor A.`,
       'Walk down 2 flights of stairs to the Main Concourse.',
       'Head straight past Concession Stand B.',
-      `Arrive at ${destination} on your right.`
+      `Arrive at ${destination} on your right.`,
     ];
   }
 
-  // Customize based on inputs
+  // Customise for known route pairs
   if (normStart.includes('GATE A') && normDest.includes('SECTION 104')) {
     estimatedTimeMin = accessibilityMode ? 6 : 4;
     path = accessibilityMode
@@ -336,11 +430,5 @@ function simulateRouteFinding(
       : ['Section 104 Entrance', 'West Stairs', 'Main Concession Row'];
   }
 
-  return {
-    path,
-    accessibilityFriendly: accessibilityMode,
-    warnings,
-    directions,
-    estimatedTimeMin
-  };
+  return { path, accessibilityFriendly: accessibilityMode, warnings, directions, estimatedTimeMin };
 }

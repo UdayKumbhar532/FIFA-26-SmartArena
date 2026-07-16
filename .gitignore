@@ -21,3 +21,6 @@ dist/
 # Logs
 *.log
 npm-debug.log*
+
+# Gemini Agent Workspace
+.agents/

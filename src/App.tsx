@@ -1,33 +1,56 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Sparkles, Menu, X, BarChart2, Users, ShieldAlert, AlertOctagon, Headphones } from 'lucide-react';
 import { StadiumMap } from './components/StadiumMap';
 import { FanCompanion } from './components/FanCompanion';
 import { StaffDashboard } from './components/StaffDashboard';
 import { SettingsPanel } from './components/SettingsPanel';
-import { ParsedIncident } from './services/geminiService';
+import type { ParsedIncident, AppView, CrowdDensities } from './types';
+import { DEFAULT_CROWD_DENSITIES, MENU_ITEMS } from './constants';
 import './styles/global.css';
 
-
 export default function App() {
-  // Config & State Management
-  const [selectedView, setSelectedView] = useState<'fan' | 'staff' | 'settings'>('fan');
-  
-  // Accessibility States
-  const [accessibilityMode, setAccessibilityMode] = useState<boolean>(false);
-  const [highContrast, setHighContrast] = useState<boolean>(false);
+  // ── View & Navigation State ──────────────────────────────────────────────
+  const [selectedView, setSelectedView] = useState<AppView>('fan');
+  const [isMenuOpen, setIsMenuOpen]     = useState<boolean>(false);
 
-  // Navigation Drawer & Emergency Dispatch States
-  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  // ── Accessibility State ──────────────────────────────────────────────────
+  const [accessibilityMode, setAccessibilityMode] = useState<boolean>(false);
+  const [highContrast, setHighContrast]           = useState<boolean>(false);
+
+  // ── Emergency Dispatch State ─────────────────────────────────────────────
   const [emergencyStopDispatch, setEmergencyStopDispatch] = useState<boolean>(false);
 
-  // Layout & Interaction States
-  const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  // ── Layout / Wayfinding State ────────────────────────────────────────────
+  const [selectedNode, setSelectedNode]       = useState<string | null>(null);
   const [highlightedPath, setHighlightedPath] = useState<string[]>([]);
 
-  // Ref for first drawer item (focus trap on open)
+  // ── Crowd & Incident State ───────────────────────────────────────────────
+  const [crowdDensities, setCrowdDensities] = useState<CrowdDensities>(DEFAULT_CROWD_DENSITIES);
+
+  // Pre-configured incidents so the command queue is live on launch
+  const [incidents, setIncidents] = useState<ParsedIncident[]>([
+    {
+      category: 'Facilities',
+      priority: 'Medium',
+      location: 'Section 106',
+      description: 'Minor water leakage reported near the third row seats, creating a minor hazard.',
+      remediationSteps: ['Deploy janitorial team with dry-mops.', 'Place a yellow warning cone at row entrance.'],
+    },
+    {
+      category: 'Medical',
+      priority: 'High',
+      location: 'Section 112',
+      description: 'An elderly fan reports severe heat exhaustion and dizziness near Gate D exit.',
+      remediationSteps: ['Dispatch nearby volunteer with cold water.', 'Alert medical staff at the west gate hub.'],
+    },
+  ]);
+
+  // Ref for first drawer item — focus trap on open (WCAG 2.1 SC 2.1.2)
   const firstDrawerItemRef = useRef<HTMLButtonElement>(null);
 
-  // Keyboard handlers: Escape to close menu, focus trap for accessibility
+  // ── Side Effects ─────────────────────────────────────────────────────────
+
+  // Keyboard handler: Escape key closes the navigation drawer
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isMenuOpen) {
@@ -38,70 +61,20 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isMenuOpen]);
 
-  // Focus first drawer item when opened (Accessibility: WCAG 2.1 AA)
+  // Focus first drawer item when drawer opens — WCAG 2.4.3 Focus Order
   useEffect(() => {
     if (isMenuOpen && firstDrawerItemRef.current) {
       firstDrawerItemRef.current.focus();
     }
   }, [isMenuOpen]);
 
-  // Prevent body scroll when drawer is open
+  // Prevent body scroll while drawer is open
   useEffect(() => {
     document.body.style.overflow = isMenuOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [isMenuOpen]);
 
-  // Jump helper: scrolls to target section and applies glow
-  const handleJumpToSection = (targetId: string, viewName: 'fan' | 'staff') => {
-    setSelectedView(viewName);
-    setIsMenuOpen(false);
-    
-    // Timeout allows React render to complete before scrolling
-    setTimeout(() => {
-      const element = document.getElementById(targetId);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        element.classList.add('highlight-glow');
-        setTimeout(() => {
-          element.classList.remove('highlight-glow');
-        }, 2500);
-      }
-    }, 200);
-  };
-
-  // Toggle emergency lockdown
-  const handleToggleEmergencyStop = () => {
-    setEmergencyStopDispatch(prev => !prev);
-    setIsMenuOpen(false);
-  };
-
-  // Crowd & Operations States
-  const [crowdDensities, setCrowdDensities] = useState<{ [key: string]: number }>({
-    'Section 102': 35,
-    'Section 106': 18,
-    'Section 108': 42,
-    'Section 112': 78,
-  });
-
-  // Pre-configured incidents so the command queue is live on launch
-  const [incidents, setIncidents] = useState<ParsedIncident[]>([
-    {
-      category: 'Facilities',
-      priority: 'Medium',
-      location: 'Section 106',
-      description: 'Minor water leakage reported near the third row seats, creating a minor hazard.',
-      remediationSteps: ['Deploy janitorial team with dry-mops.', 'Place a yellow warning cone at row entrance.']
-    },
-    {
-      category: 'Medical',
-      priority: 'High',
-      location: 'Section 112',
-      description: 'An elderly fan reports severe heat exhaustion and dizziness near Gate D exit.',
-      remediationSteps: ['Dispatch nearby volunteer with cold water.', 'Alert medical staff at the west gate hub.']
-    }
-  ]);
-
-  // Synchronize High-Contrast Mode on document body
+  // Apply high-contrast data attribute to document root
   useEffect(() => {
     if (highContrast) {
       document.documentElement.setAttribute('data-theme', 'high-contrast');
@@ -110,48 +83,58 @@ export default function App() {
     }
   }, [highContrast]);
 
-  const handleAddIncident = (newIncident: ParsedIncident) => {
-    setIncidents(prev => [newIncident, ...prev]);
-  };
+  // ── Event Handlers (memoised to prevent unnecessary child re-renders) ────
 
-  const handleResolveIncident = (idx: number) => {
-    setIncidents(prev => prev.filter((_, i) => i !== idx));
-  };
+  /**
+   * Scrolls to a named section on the page, switching to the correct view
+   * first and applying a brief highlight glow for orientation.
+   */
+  const handleJumpToSection = useCallback((targetId: string, viewName: AppView) => {
+    setSelectedView(viewName);
+    setIsMenuOpen(false);
+    // Allow React to commit the view change before scrolling
+    setTimeout(() => {
+      const element = document.getElementById(targetId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('highlight-glow');
+        setTimeout(() => element.classList.remove('highlight-glow'), 2500);
+      }
+    }, 200);
+  }, []);
 
-  // Menu navigation items definition
-  const menuItems = [
-    {
-      id: 'incident-queue',
-      label: 'Incidents',
-      icon: <ShieldAlert size={18} />,
-      view: 'staff' as const,
-      description: 'Active dispatch queue',
-    },
-    {
-      id: 'ai-support',
-      label: 'AI Support',
-      icon: <Headphones size={18} />,
-      view: 'fan' as const,
-      description: 'Fan companion & chat',
-    },
-    {
-      id: 'crowd-heatmap',
-      label: 'Crowd Heat Map',
-      icon: <Users size={18} />,
-      view: 'staff' as const,
-      description: 'Live density monitor',
-    },
-    {
-      id: 'analytics-section',
-      label: 'Analytics',
-      icon: <BarChart2 size={18} />,
-      view: 'staff' as const,
-      description: 'Eco & operations data',
-    },
-  ];
+  /** Toggles the emergency stop dispatch lockdown. */
+  const handleToggleEmergencyStop = useCallback(() => {
+    setEmergencyStopDispatch((prev) => !prev);
+    setIsMenuOpen(false);
+  }, []);
 
+  /** Prepends a newly parsed incident to the queue. */
+  const handleAddIncident = useCallback((newIncident: ParsedIncident) => {
+    setIncidents((prev) => [newIncident, ...prev]);
+  }, []);
+
+  /** Removes a resolved incident by index. */
+  const handleResolveIncident = useCallback((idx: number) => {
+    setIncidents((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  /** Toggles accessibility routing mode. */
+  const handleToggleAccessibilityMode = useCallback(() => {
+    setAccessibilityMode((prev) => !prev);
+  }, []);
+
+  /** Toggles high contrast display theme. */
+  const handleToggleHighContrast = useCallback(() => {
+    setHighContrast((prev) => !prev);
+  }, []);
+
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="app-container">
+
+      {/* ── Skip-to-content link (WCAG 2.4.1) ── */}
+      <a href="#main-content" className="skip-link">Skip to main content</a>
 
       {/* ── Emergency Stop Dispatch Banner ── */}
       {emergencyStopDispatch && (
@@ -194,6 +177,7 @@ export default function App() {
 
       {/* ── Slide-Out Navigation Drawer ── */}
       <aside
+        id="main-nav-drawer"
         className={`menu-drawer ${isMenuOpen ? 'open' : ''}`}
         role="navigation"
         aria-label="Main navigation"
@@ -246,17 +230,22 @@ export default function App() {
 
         {/* Nav Items */}
         <ul className="menu-drawer-list" role="menubar">
-          {menuItems.map((item, idx) => (
+          {MENU_ITEMS.map((item, idx) => (
             <li key={item.id} role="none">
               <button
                 ref={idx === 0 ? firstDrawerItemRef : undefined}
                 className="menu-drawer-item"
                 role="menuitem"
+                tabIndex={isMenuOpen ? 0 : -1}
                 onClick={() => handleJumpToSection(item.id, item.view)}
                 aria-label={`Navigate to ${item.label}: ${item.description}`}
               >
                 <span style={{ color: 'var(--color-primary)', flexShrink: 0 }} aria-hidden="true">
-                  {item.icon}
+                  {/* Icon rendered dynamically via MENU_ITEMS — kept here for layout */}
+                  {item.id === 'incident-queue'    && <ShieldAlert size={18} />}
+                  {item.id === 'ai-support'        && <Headphones size={18} />}
+                  {item.id === 'crowd-heatmap'     && <Users size={18} />}
+                  {item.id === 'analytics-section' && <BarChart2 size={18} />}
                 </span>
                 <span style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                   <span style={{ fontWeight: 600, fontSize: '14px' }}>{item.label}</span>
@@ -334,14 +323,14 @@ export default function App() {
             justifyContent: 'space-between',
             alignItems: 'center',
             flexWrap: 'wrap',
-            gap: 'var(--spacing-md)'
+            gap: 'var(--spacing-md)',
           }}
         >
           {/* Left: Hamburger + Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
             {/* Hamburger Menu Toggle Button */}
             <button
-              onClick={() => setIsMenuOpen(prev => !prev)}
+              onClick={() => setIsMenuOpen((prev) => !prev)}
               style={{
                 background: isMenuOpen ? 'rgba(139, 92, 246, 0.15)' : 'rgba(255, 255, 255, 0.05)',
                 border: `1px solid ${isMenuOpen ? 'rgba(139, 92, 246, 0.4)' : 'rgba(255,255,255,0.08)'}`,
@@ -427,17 +416,17 @@ export default function App() {
 
       {/* ── Main Workspace ── */}
       <main className="main-content" id="main-content" aria-label="Main application workspace">
-        
+
         {/* Dynamic Multi-role Grid */}
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
             gap: 'var(--spacing-lg)',
-            alignItems: 'start'
+            alignItems: 'start',
           }}
         >
-          {/* Left Panel: Stadium Map - always visible for situational awareness */}
+          {/* Left Panel: Stadium Map — always visible for situational awareness */}
           <div style={{ position: 'sticky', top: '100px' }}>
             <StadiumMap
               selectedNode={selectedNode}
@@ -457,7 +446,7 @@ export default function App() {
                 onSelectNode={setSelectedNode}
               />
             )}
-            
+
             {selectedView === 'staff' && (
               <StaffDashboard
                 crowdDensities={crowdDensities}
@@ -472,13 +461,13 @@ export default function App() {
             {selectedView === 'settings' && (
               <SettingsPanel
                 accessibilityMode={accessibilityMode}
-                onToggleAccessibilityMode={() => setAccessibilityMode(!accessibilityMode)}
+                onToggleAccessibilityMode={handleToggleAccessibilityMode}
                 highContrast={highContrast}
-                onToggleHighContrast={() => setHighContrast(!highContrast)}
+                onToggleHighContrast={handleToggleHighContrast}
+                hasApiKey={Boolean(import.meta.env.VITE_GEMINI_API_KEY)}
               />
             )}
           </div>
-
         </div>
 
       </main>
@@ -492,7 +481,7 @@ export default function App() {
           fontSize: '12px',
           color: 'var(--text-muted)',
           marginTop: 'var(--spacing-xl)',
-          background: 'var(--bg-secondary)'
+          background: 'var(--bg-secondary)',
         }}
       >
         <p>© 2026 FIFA SmartArena Operations Challenge. Powered by Gemini Generative AI.</p>

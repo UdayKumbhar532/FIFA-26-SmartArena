@@ -1,12 +1,12 @@
 import React from 'react';
 import { ShieldCheck, Accessibility, Settings, Zap } from 'lucide-react';
 
-
 interface SettingsPanelProps {
   accessibilityMode: boolean;
   onToggleAccessibilityMode: () => void;
   highContrast: boolean;
   onToggleHighContrast: () => void;
+  hasApiKey: boolean;
 }
 
 /**
@@ -21,6 +21,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onToggleAccessibilityMode,
   highContrast,
   onToggleHighContrast,
+  hasApiKey,
 }) => {
   return (
     <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
@@ -39,19 +40,25 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           gap: '12px',
           padding: 'var(--spacing-md)',
           borderRadius: 'var(--radius-sm)',
-          background: 'rgba(16, 185, 129, 0.06)',
-          border: '1px solid rgba(16, 185, 129, 0.18)',
+          background: hasApiKey ? 'rgba(16, 185, 129, 0.06)' : 'rgba(249, 115, 22, 0.06)',
+          border: hasApiKey ? '1px solid rgba(16, 185, 129, 0.18)' : '1px solid rgba(249, 115, 22, 0.18)',
         }}
         role="status"
         aria-label="AI engine status"
       >
-        <Zap size={20} style={{ color: 'var(--color-success)', flexShrink: 0 }} aria-hidden="true" />
+        <Zap
+          size={20}
+          style={{ color: hasApiKey ? 'var(--color-success)' : 'var(--color-warning)', flexShrink: 0 }}
+          aria-hidden="true"
+        />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-success)' }}>
-            ⚡ Live Gemini AI — Connected
+          <span style={{ fontSize: '13px', fontWeight: 700, color: hasApiKey ? 'var(--color-success)' : 'var(--color-warning)' }}>
+            {hasApiKey ? '⚡ Live Gemini AI — Connected' : '🔌 Offline AI Simulator — Active'}
           </span>
           <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            ArenaMind is powered by Google Gemini 1.5 Flash in real-time AI mode.
+            {hasApiKey
+              ? 'ArenaMind is powered by Google Gemini 1.5 Flash in real-time AI mode.'
+              : 'Using high-fidelity local simulator fallback (no API key configured).'}
           </span>
         </div>
       </div>
