@@ -115,37 +115,27 @@ export const StadiumMap: React.FC<StadiumMapProps> = memo(({
   return (
     <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
       {/* Header row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="map-legend-container">
         <h3 style={{ fontSize: '18px', fontWeight: 600 }}>Interactive Stadium Layout</h3>
         {/* Density legend */}
-        <div style={{ display: 'flex', gap: 'var(--spacing-md)', fontSize: '12px' }} aria-label="Crowd density legend">
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-success)', display: 'inline-block' }} aria-hidden="true" />
+        <div className="map-legend-list" aria-label="Crowd density legend">
+          <span className="map-legend-item">
+            <span className="map-legend-marker" style={{ backgroundColor: 'var(--color-success)' }} aria-hidden="true" />
             Low Density
           </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-warning)', display: 'inline-block' }} aria-hidden="true" />
+          <span className="map-legend-item">
+            <span className="map-legend-marker" style={{ backgroundColor: 'var(--color-warning)' }} aria-hidden="true" />
             Moderate
           </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-danger)', display: 'inline-block' }} aria-hidden="true" />
+          <span className="map-legend-item">
+            <span className="map-legend-marker" style={{ backgroundColor: 'var(--color-danger)' }} aria-hidden="true" />
             Congested
           </span>
         </div>
       </div>
 
       {/* SVG Map */}
-      <div
-        style={{
-          position: 'relative',
-          width: '100%',
-          aspectRatio: '16/10',
-          background: 'rgba(0,0,0,0.2)',
-          borderRadius: 'var(--radius-md)',
-          overflow: 'hidden',
-          border: '1px solid rgba(255,255,255,0.05)',
-        }}
-      >
+      <div className="map-svg-outer-wrapper">
         <svg
           viewBox="0 0 800 500"
           width="100%"
@@ -406,16 +396,7 @@ export const StadiumMap: React.FC<StadiumMapProps> = memo(({
       </div>
 
       {/* Usage tip */}
-      <div
-        style={{
-          padding: 'var(--spacing-sm)',
-          borderRadius: 'var(--radius-sm)',
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px solid rgba(255,255,255,0.03)',
-          fontSize: '13px',
-          color: 'var(--text-secondary)',
-        }}
-      >
+      <div className="map-tip-box">
         <p>
           💡 <strong>Tip:</strong> Click or press <kbd>Enter</kbd> / <kbd>Space</kbd> on any seating section, gate, first-aid station, or concession on the map to select it as a waypoint, inspect its details, or use it in the navigation tool.
         </p>

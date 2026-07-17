@@ -6,7 +6,7 @@
  * without scattering literal values throughout JSX.
  */
 
-import type { CrowdDensities, TravelMethod, AppView } from './types';
+import type { CrowdDensities, TravelMethod, AppView, ParsedIncident } from './types';
 
 // ---------------------------------------------------------------------------
 // Crowd Densities
@@ -19,6 +19,30 @@ export const DEFAULT_CROWD_DENSITIES: CrowdDensities = {
   'Section 108': 42,
   'Section 112': 78,
 } as const;
+
+// ---------------------------------------------------------------------------
+// Initial Incidents
+// ---------------------------------------------------------------------------
+
+/** Pre-configured incidents to populate the active dispatch queue on launch. */
+export const DEFAULT_INCIDENTS: readonly ParsedIncident[] = [
+  {
+    id: 'inc-default-1',
+    category: 'Facilities',
+    priority: 'Medium',
+    location: 'Section 106',
+    description: 'Minor water leakage reported near the third row seats, creating a minor hazard.',
+    remediationSteps: ['Deploy janitorial team with dry-mops.', 'Place a yellow warning cone at row entrance.'],
+  },
+  {
+    id: 'inc-default-2',
+    category: 'Medical',
+    priority: 'High',
+    location: 'Section 112',
+    description: 'An elderly fan reports severe heat exhaustion and dizziness near Gate D exit.',
+    remediationSteps: ['Dispatch nearby volunteer with cold water.', 'Alert medical staff at the west gate hub.'],
+  },
+] as const;
 
 // ---------------------------------------------------------------------------
 // Carbon / Sustainability

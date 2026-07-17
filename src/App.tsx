@@ -5,7 +5,7 @@ import { FanCompanion } from './components/FanCompanion';
 import { StaffDashboard } from './components/StaffDashboard';
 import { SettingsPanel } from './components/SettingsPanel';
 import type { ParsedIncident, AppView, CrowdDensities } from './types';
-import { DEFAULT_CROWD_DENSITIES, MENU_ITEMS } from './constants';
+import { DEFAULT_CROWD_DENSITIES, MENU_ITEMS, DEFAULT_INCIDENTS } from './constants';
 import './styles/global.css';
 
 export default function App() {
@@ -27,23 +27,11 @@ export default function App() {
   // ── Crowd & Incident State ───────────────────────────────────────────────
   const [crowdDensities, setCrowdDensities] = useState<CrowdDensities>(DEFAULT_CROWD_DENSITIES);
 
-  // Pre-configured incidents so the command queue is live on launch
-  const [incidents, setIncidents] = useState<ParsedIncident[]>([
-    {
-      category: 'Facilities',
-      priority: 'Medium',
-      location: 'Section 106',
-      description: 'Minor water leakage reported near the third row seats, creating a minor hazard.',
-      remediationSteps: ['Deploy janitorial team with dry-mops.', 'Place a yellow warning cone at row entrance.'],
-    },
-    {
-      category: 'Medical',
-      priority: 'High',
-      location: 'Section 112',
-      description: 'An elderly fan reports severe heat exhaustion and dizziness near Gate D exit.',
-      remediationSteps: ['Dispatch nearby volunteer with cold water.', 'Alert medical staff at the west gate hub.'],
-    },
-  ]);
+  // Counter to generate unique incident IDs
+  const [incidentCounter, setIncidentCounter] = useState<number>(1);
+
+  // Pre-configured incidents using stable IDs
+  const [incidents, setIncidents] = useState<ParsedIncident[]>(() => [...DEFAULT_INCIDENTS]);
 
   // Ref for first drawer item — focus trap on open (WCAG 2.1 SC 2.1.2)
   const firstDrawerItemRef = useRef<HTMLButtonElement>(null);
@@ -109,12 +97,19 @@ export default function App() {
     setIsMenuOpen(false);
   }, []);
 
-  /** Prepends a newly parsed incident to the queue. */
-  const handleAddIncident = useCallback((newIncident: ParsedIncident) => {
-    setIncidents((prev) => [newIncident, ...prev]);
+  /** Prepends a newly parsed incident to the queue with a unique stable ID. */
+  const handleAddIncident = useCallback((newIncident: Omit<ParsedIncident, 'id'>) => {
+    setIncidentCounter((prevCounter) => {
+      const newId = `inc-dynamic-${prevCounter}`;
+      setIncidents((prevIncidents) => [
+        { ...newIncident, id: newId },
+        ...prevIncidents,
+      ]);
+      return prevCounter + 1;
+    });
   }, []);
 
-  /** Removes a resolved incident by index. */
+  /** Removes a resolved incident by matching its stable ID. */
   const handleResolveIncident = useCallback((idx: number) => {
     setIncidents((prev) => prev.filter((_, i) => i !== idx));
   }, []);
@@ -148,17 +143,7 @@ export default function App() {
           🚨 EMERGENCY STOP DISPATCH ACTIVE — All dispatch queues are frozen. Contact Operations Command immediately.
           <button
             onClick={handleToggleEmergencyStop}
-            style={{
-              marginLeft: '16px',
-              background: 'rgba(255,255,255,0.15)',
-              border: '1px solid rgba(255,255,255,0.4)',
-              color: 'white',
-              borderRadius: '4px',
-              padding: '2px 10px',
-              fontSize: '11px',
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
+            className="btn btn-secondary emergency-btn"
             aria-label="Deactivate emergency stop dispatch"
           >
             DEACTIVATE
@@ -185,38 +170,17 @@ export default function App() {
       >
         {/* Drawer Header */}
         <div className="menu-drawer-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                background: 'linear-gradient(135deg, var(--color-accent), #b45309)',
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              aria-hidden="true"
-            >
-              <Sparkles size={14} style={{ color: '#070514' }} />
+          <div className="header-logo-container">
+            <div className="menu-logo-icon-wrapper" aria-hidden="true">
+              <Sparkles size={14} className="header-logo-icon" />
             </div>
-            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-accent)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            <span className="menu-drawer-title-text">
               SmartArena Menu
             </span>
           </div>
           <button
             onClick={() => setIsMenuOpen(false)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '4px',
-              borderRadius: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            className="menu-drawer-close-btn"
             aria-label="Close navigation menu"
           >
             <X size={20} />
@@ -224,7 +188,7 @@ export default function App() {
         </div>
 
         {/* Section label */}
-        <p style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
+        <p className="menu-drawer-section-label">
           Quick Navigation
         </p>
 
@@ -240,16 +204,15 @@ export default function App() {
                 onClick={() => handleJumpToSection(item.id, item.view)}
                 aria-label={`Navigate to ${item.label}: ${item.description}`}
               >
-                <span style={{ color: 'var(--color-primary)', flexShrink: 0 }} aria-hidden="true">
-                  {/* Icon rendered dynamically via MENU_ITEMS — kept here for layout */}
+                <span className="menu-drawer-item-icon-container" aria-hidden="true">
                   {item.id === 'incident-queue'    && <ShieldAlert size={18} />}
                   {item.id === 'ai-support'        && <Headphones size={18} />}
                   {item.id === 'crowd-heatmap'     && <Users size={18} />}
                   {item.id === 'analytics-section' && <BarChart2 size={18} />}
                 </span>
-                <span style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                  <span style={{ fontWeight: 600, fontSize: '14px' }}>{item.label}</span>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>{item.description}</span>
+                <span className="menu-drawer-item-text-wrapper">
+                  <span className="menu-drawer-item-label">{item.label}</span>
+                  <span className="menu-drawer-item-desc">{item.description}</span>
                 </span>
               </button>
             </li>
@@ -257,39 +220,25 @@ export default function App() {
         </ul>
 
         {/* Divider */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', margin: '4px 0' }} />
+        <div className="menu-drawer-divider" />
 
         {/* Emergency Stop Dispatch Toggle */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
-          <p style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
+        <div className="menu-drawer-emergency-container">
+          <p className="menu-drawer-section-label">
             Emergency Controls
           </p>
           <button
-            className={`btn ${emergencyStopDispatch ? 'btn-secondary' : 'btn-danger'}`}
-            style={{
-              width: '100%',
-              justifyContent: 'flex-start',
-              padding: '12px 16px',
-              gap: '10px',
-              fontSize: '13px',
-              border: emergencyStopDispatch
-                ? '1px solid rgba(16, 185, 129, 0.4)'
-                : '1px solid rgba(239, 68, 68, 0.4)',
-              background: emergencyStopDispatch
-                ? 'rgba(16, 185, 129, 0.08)'
-                : 'rgba(239, 68, 68, 0.1)',
-              color: emergencyStopDispatch ? 'var(--color-success)' : 'var(--color-danger)',
-            }}
+            className={`btn menu-drawer-emergency-btn ${emergencyStopDispatch ? 'btn-secondary' : 'btn-danger'}`}
             onClick={handleToggleEmergencyStop}
             aria-label={emergencyStopDispatch ? 'Deactivate Emergency Stop Dispatch' : 'Activate Emergency Stop Dispatch'}
             aria-pressed={emergencyStopDispatch}
           >
             <AlertOctagon size={16} aria-hidden="true" />
-            <span style={{ display: 'flex', flexDirection: 'column', gap: '1px', textAlign: 'left' }}>
-              <span style={{ fontWeight: 700, fontSize: '13px' }}>
+            <span className="menu-drawer-emergency-btn-text-wrapper">
+              <span className="menu-drawer-emergency-btn-title">
                 {emergencyStopDispatch ? '✅ Dispatch Restored' : '🛑 Stop Dispatch'}
               </span>
-              <span style={{ fontSize: '10px', opacity: 0.7, fontWeight: 400 }}>
+              <span className="menu-drawer-emergency-btn-desc">
                 {emergencyStopDispatch ? 'Click to resume normal operations' : 'Freeze all incident dispatch queues'}
               </span>
             </span>
@@ -297,37 +246,16 @@ export default function App() {
         </div>
 
         {/* Footer branding */}
-        <div style={{ marginTop: 'auto', paddingTop: 'var(--spacing-md)', borderTop: '1px solid rgba(255,255,255,0.04)', fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center' }}>
+        <div className="menu-drawer-footer">
           FIFA 26 SmartArena · Powered by Gemini AI
         </div>
       </aside>
 
       {/* ── Sticky Header ── */}
-      <header
-        style={{
-          background: 'rgba(7, 5, 20, 0.88)',
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
-          borderBottom: '1px solid var(--glass-border)',
-          padding: 'var(--spacing-md) var(--spacing-lg)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '1400px',
-            margin: '0 auto',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 'var(--spacing-md)',
-          }}
-        >
+      <header className="app-header">
+        <div className="header-container">
           {/* Left: Hamburger + Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
+          <div className="header-left">
             {/* Hamburger Menu Toggle Button */}
             <button
               onClick={() => setIsMenuOpen((prev) => !prev)}
@@ -353,40 +281,26 @@ export default function App() {
             </button>
 
             {/* Logo & Title */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
-              <div
-                style={{
-                  background: 'linear-gradient(135deg, var(--color-accent), #b45309)',
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: 'var(--shadow-glow-accent)',
-                  flexShrink: 0,
-                }}
-                aria-hidden="true"
-              >
-                <Sparkles size={20} style={{ color: '#070514' }} />
+            <div className="header-logo-container">
+              <div className="header-logo-icon-bg" aria-hidden="true">
+                <Sparkles size={20} className="header-logo-icon" />
               </div>
-              <div>
-                <h1 style={{ fontSize: '20px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '-0.03em' }}>
+              <div className="header-logo-text-wrapper">
+                <h1 className="header-logo-title">
                   FIFA 26 <span style={{ color: 'var(--color-accent)' }}>SmartArena</span>
                 </h1>
-                <p style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                  AI Stadium Operations & Fan Portal
+                <p className="header-logo-subtitle">
+                  AI Stadium Operations &amp; Fan Portal
                 </p>
               </div>
             </div>
           </div>
 
           {/* Right: Role View Toggles */}
-          <nav aria-label="Role view selector" style={{ display: 'flex', gap: 'var(--spacing-sm)', flexWrap: 'wrap' }}>
+          <nav className="header-nav" aria-label="Role view selector">
             <button
               onClick={() => setSelectedView('fan')}
-              className={`btn ${selectedView === 'fan' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ padding: '8px 16px', fontSize: '13px' }}
+              className={`btn nav-btn ${selectedView === 'fan' ? 'btn-primary' : 'btn-secondary'}`}
               aria-label="Switch to Fan Experience mode"
               aria-pressed={selectedView === 'fan'}
             >
@@ -394,8 +308,7 @@ export default function App() {
             </button>
             <button
               onClick={() => setSelectedView('staff')}
-              className={`btn ${selectedView === 'staff' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ padding: '8px 16px', fontSize: '13px' }}
+              className={`btn nav-btn ${selectedView === 'staff' ? 'btn-primary' : 'btn-secondary'}`}
               aria-label="Switch to Staff Operations Command mode"
               aria-pressed={selectedView === 'staff'}
             >
@@ -403,8 +316,7 @@ export default function App() {
             </button>
             <button
               onClick={() => setSelectedView('settings')}
-              className={`btn ${selectedView === 'settings' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ padding: '8px 16px', fontSize: '13px' }}
+              className={`btn nav-btn ${selectedView === 'settings' ? 'btn-primary' : 'btn-secondary'}`}
               aria-label="Switch to Settings view"
               aria-pressed={selectedView === 'settings'}
             >
@@ -418,16 +330,9 @@ export default function App() {
       <main className="main-content" id="main-content" aria-label="Main application workspace">
 
         {/* Dynamic Multi-role Grid */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-            gap: 'var(--spacing-lg)',
-            alignItems: 'start',
-          }}
-        >
+        <div className="layout-grid">
           {/* Left Panel: Stadium Map — always visible for situational awareness */}
-          <div style={{ position: 'sticky', top: '100px' }}>
+          <div className="sticky-sidebar">
             <StadiumMap
               selectedNode={selectedNode}
               onSelectNode={setSelectedNode}
@@ -473,17 +378,7 @@ export default function App() {
       </main>
 
       {/* ── Footer ── */}
-      <footer
-        style={{
-          borderTop: '1px solid var(--glass-border)',
-          padding: 'var(--spacing-md)',
-          textAlign: 'center',
-          fontSize: '12px',
-          color: 'var(--text-muted)',
-          marginTop: 'var(--spacing-xl)',
-          background: 'var(--bg-secondary)',
-        }}
-      >
+      <footer className="app-footer">
         <p>© 2026 FIFA SmartArena Operations Challenge. Powered by Gemini Generative AI.</p>
       </footer>
 

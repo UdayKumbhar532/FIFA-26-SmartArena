@@ -1,20 +1,14 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Send, Compass, ShieldAlert, Sparkles, Volume2, TreePine } from 'lucide-react';
 import { chatWithAI, getWayfindingRoute } from '../services/geminiService';
-import type { RouteDetail, TravelMethod } from '../types';
+import type { RouteDetail, TravelMethod, ChatMessage } from '../types';
 import { CO2_EMISSION_FACTORS, BASELINE_CAR_EMISSION_FACTOR } from '../constants';
-
 
 interface FanCompanionProps {
   accessibilityMode: boolean;
   onSetWaypoints: (path: string[]) => void;
   selectedNode: string | null;
   onSelectNode: (node: string | null) => void;
-}
-
-interface ChatMessage {
-  sender: 'user' | 'ai';
-  text: string;
 }
 
 export const FanCompanion: React.FC<FanCompanionProps> = ({
@@ -26,8 +20,13 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
   // Chat state
   const [chatInput, setChatInput]   = useState('');
   const [messages, setMessages]     = useState<ChatMessage[]>([
-    { sender: 'ai', text: 'Hello! I am ArenaMind. Ask me any questions about seating, navigation, concessions, accessibility, or transit for the FIFA World Cup 2026!' },
+    {
+      id: 'msg-init-1',
+      sender: 'ai',
+      text: 'Hello! I am ArenaMind. Ask me any questions about seating, navigation, concessions, accessibility, or transit for the FIFA World Cup 2026!',
+    },
   ]);
+  const [chatCounter, setChatCounter]   = useState<number>(1);
   const [chatLoading, setChatLoading]   = useState(false);
   const [isSpeaking, setIsSpeaking]     = useState(false);
   const [ttsError, setTtsError]         = useState<string | null>(null);
@@ -71,28 +70,31 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
     const text = textToSend ?? chatInput;
     if (!text.trim()) return;
 
-    setMessages((prev) => [...prev, { sender: 'user', text }]);
+    const userMsgId = `msg-user-${chatCounter}`;
+    const aiMsgId   = `msg-ai-${chatCounter}`;
+
+    setMessages((prev) => [...prev, { id: userMsgId, sender: 'user', text }]);
     if (!textToSend) setChatInput('');
     setChatLoading(true);
+    setChatCounter((prev) => prev + 1);
 
     try {
       const response = await chatWithAI(text, `accessibilityMode: ${accessibilityMode}`);
-      setMessages((prev) => [...prev, { sender: 'ai', text: response }]);
+      setMessages((prev) => [...prev, { id: aiMsgId, sender: 'ai', text: response }]);
     } catch {
       setMessages((prev) => [
         ...prev,
-        { sender: 'ai', text: 'Sorry, I encountered an error. Please try again.' },
+        { id: aiMsgId, sender: 'ai', text: 'Sorry, I encountered an error. Please try again.' },
       ]);
     } finally {
       setChatLoading(false);
     }
-  }, [chatInput, accessibilityMode]);
+  }, [chatInput, chatCounter, accessibilityMode]);
 
   // ── Text-to-Speech ────────────────────────────────────────────────────────
 
   const handleSpeak = useCallback((text: string) => {
     if (!('speechSynthesis' in window)) {
-      // Replace browser alert() with an in-UI error notification
       setTtsError('Text-to-speech is not supported in your browser.');
       setTimeout(() => setTtsError(null), 4000);
       return;
@@ -147,72 +149,67 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
     setEcoTip(tips[travelMethod]);
   }, [travelMethod, travelDistance]);
 
+  // Derived style logic using useMemo to ensure 100% efficiency
+  const warningList = useMemo(() => {
+    if (!route || route.warnings.length === 0) return null;
+    return route.warnings;
+  }, [route]);
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--spacing-lg)' }}>
+    <div className="fan-companion-container">
 
       {/* 1. GenAI Chat Assistant */}
-      <div id="ai-support" className="glass-panel" style={{ display: 'flex', flexDirection: 'column', height: '400px' }}>
+      <div id="ai-support" className="glass-panel chat-panel-container">
         {/* Panel header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 'var(--spacing-sm)', marginBottom: 'var(--spacing-sm)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="chat-panel-header">
+          <div className="chat-panel-header-title">
             <Sparkles size={18} style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
             <h3 style={{ fontSize: '16px', fontWeight: 600 }}>ArenaMind Assistant</h3>
           </div>
-          <span style={{ fontSize: '11px', color: 'var(--color-success)', fontWeight: 600 }}>
+          <span className="chat-panel-status-tag">
             ⚡ Gemini AI Active
           </span>
         </div>
 
-        {/* TTS error notification — replaces browser alert() */}
+        {/* TTS error notification */}
         {ttsError && (
-          <div
-            role="alert"
-            style={{ padding: '8px 12px', borderRadius: 'var(--radius-sm)', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: 'var(--color-danger)', fontSize: '12px', marginBottom: 'var(--spacing-sm)' }}
-          >
+          <div role="alert" className="chat-tts-error-alert">
             {ttsError}
           </div>
         )}
 
-        {/* Message feed — aria-live region so screen readers announce new AI messages */}
+        {/* Message feed */}
         <div
           role="log"
           aria-live="polite"
           aria-label="ArenaMind chat messages"
           aria-atomic="false"
-          style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', paddingRight: '4px', marginBottom: 'var(--spacing-md)' }}
+          className="chat-messages-container"
         >
-          {messages.map((msg, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start', alignItems: 'flex-start', gap: '8px' }}>
+          {messages.map((msg) => (
+            <div key={msg.id} className="chat-message-row" style={{ justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}>
               {msg.sender === 'ai' && (
-                <div
-                  style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'var(--color-primary-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 800, color: 'var(--color-primary)', flexShrink: 0 }}
-                  aria-hidden="true"
-                >
+                <div className="chat-message-avatar" aria-hidden="true">
                   AM
                 </div>
               )}
               <div
-                style={{
-                  maxWidth: '75%',
-                  padding: '10px 14px',
-                  borderRadius: msg.sender === 'user' ? '12px 12px 0 12px' : '0 12px 12px 12px',
-                  background: msg.sender === 'user' ? 'linear-gradient(135deg, var(--color-primary), #6d28d9)' : 'rgba(255,255,255,0.04)',
-                  border: msg.sender === 'user' ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                  fontSize: '13px',
-                  color: 'var(--text-primary)',
-                }}
+                className={`chat-message-bubble ${
+                  msg.sender === 'user' ? 'chat-message-bubble-user' : 'chat-message-bubble-ai'
+                }`}
               >
                 {msg.text}
                 {msg.sender === 'ai' && (
                   <button
                     onClick={() => handleSpeak(msg.text)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'block', marginTop: '6px' }}
+                    className="chat-tts-btn"
                     aria-label={isSpeaking ? 'Stop reading this message aloud' : 'Read this message aloud'}
                   >
                     <Volume2
                       size={13}
-                      style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle', color: isSpeaking ? 'var(--color-accent)' : 'inherit' }}
+                      className="chat-tts-btn-icon"
+                      style={{ color: isSpeaking ? 'var(--color-accent)' : 'inherit' }}
                       aria-hidden="true"
                     />
                     <span style={{ fontSize: '10px' }}>{isSpeaking ? 'Stop speaking' : 'Read aloud'}</span>
@@ -223,9 +220,9 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
           ))}
 
           {chatLoading && (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }} aria-live="polite" aria-label="ArenaMind is generating a response">
-              <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'var(--text-muted)' }} aria-hidden="true">...</div>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>ArenaMind is thinking...</span>
+            <div className="chat-loading-row" aria-live="polite" aria-label="ArenaMind is generating a response">
+              <div className="chat-loading-avatar" aria-hidden="true">...</div>
+              <span className="chat-loading-text">ArenaMind is thinking...</span>
             </div>
           )}
           {/* Scroll anchor */}
@@ -233,11 +230,10 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
         </div>
 
         {/* Quick suggestion chips */}
-        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '6px' }} role="group" aria-label="Quick question suggestions">
+        <div className="chat-suggestion-chips-wrapper" role="group" aria-label="Quick question suggestions">
           <button
             onClick={() => handleSendMessage('How do I walk to the shuttle bus?')}
             className="btn btn-secondary"
-            style={{ padding: '6px 12px', fontSize: '11px', borderRadius: 'var(--radius-round)' }}
             aria-label="Ask: How do I walk to the shuttle bus?"
           >
             🚌 Transit Hubs
@@ -245,7 +241,6 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
           <button
             onClick={() => handleSendMessage('Is there wheelchair access at Section 102?')}
             className="btn btn-secondary"
-            style={{ padding: '6px 12px', fontSize: '11px', borderRadius: 'var(--radius-round)' }}
             aria-label="Ask: Is there wheelchair access at Section 102?"
           >
             ♿ Accessible Elevators
@@ -253,7 +248,6 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
           <button
             onClick={() => handleSendMessage('Where can I get vegan food?')}
             className="btn btn-secondary"
-            style={{ padding: '6px 12px', fontSize: '11px', borderRadius: 'var(--radius-round)' }}
             aria-label="Ask: Where can I get vegan food?"
           >
             🌱 Vegan Food
@@ -261,7 +255,6 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
           <button
             onClick={() => handleSendMessage('How is plastic waste recycled here?')}
             className="btn btn-secondary"
-            style={{ padding: '6px 12px', fontSize: '11px', borderRadius: 'var(--radius-round)' }}
             aria-label="Ask: How is plastic waste recycled here?"
           >
             ♻️ Recycle Guide
@@ -269,7 +262,7 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
         </div>
 
         {/* Chat input */}
-        <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
+        <div className="chat-input-row">
           <input
             type="text"
             id="chat-input"
@@ -283,8 +276,7 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
           />
           <button
             onClick={() => handleSendMessage()}
-            className="btn btn-primary"
-            style={{ padding: '12px' }}
+            className="btn btn-primary chat-send-btn"
             aria-label="Send message to ArenaMind"
             disabled={chatLoading || !chatInput.trim()}
           >
@@ -294,21 +286,20 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
       </div>
 
       {/* 2. Wayfinding Route Planner */}
-      <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 'var(--spacing-sm)' }}>
+      <div className="glass-panel">
+        <div className="wayfinder-header">
           <Compass size={18} style={{ color: 'var(--color-primary)' }} aria-hidden="true" />
           <h3 style={{ fontSize: '16px', fontWeight: 600 }}>Stadium Wayfinder</h3>
         </div>
 
-        <form onSubmit={handleGetRoute} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-sm)' }}>
+        <form onSubmit={handleGetRoute} className="wayfinder-form">
           <div>
             <label className="label" htmlFor="startSelect">Start Point</label>
             <select
               id="startSelect"
               value={startPoint}
               onChange={(e) => setStartPoint(e.target.value)}
-              className="input-field"
-              style={{ background: '#120f35' }}
+              className="input-field wayfinder-select"
             >
               <option value="Gate A">Gate A (Top-Left)</option>
               <option value="Gate B">Gate B (Top-Right)</option>
@@ -325,8 +316,7 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
               id="destSelect"
               value={endPoint}
               onChange={(e) => setEndPoint(e.target.value)}
-              className="input-field"
-              style={{ background: '#120f35' }}
+              className="input-field wayfinder-select"
             >
               <option value="Section 102">Section 102 Seating</option>
               <option value="Section 104">Section 104 ADA Deck</option>
@@ -340,7 +330,7 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
             </select>
           </div>
 
-          <div style={{ gridColumn: 'span 2', display: 'flex', gap: 'var(--spacing-sm)', marginTop: '4px' }}>
+          <div className="wayfinder-submit-row">
             <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={routeLoading}>
               {routeLoading ? 'Calculating Path...' : 'Find Route'}
             </button>
@@ -355,27 +345,27 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
         {/* Route directions */}
         {route && (
           <div
-            style={{ padding: 'var(--spacing-md)', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}
+            className="wayfinder-results-box"
             aria-live="polite"
             aria-label="Route directions"
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '4px' }}>
+            <div className="wayfinder-results-header">
               <span>⏱️ Time: <strong>{route.estimatedTimeMin} mins</strong></span>
               <span className={`badge ${route.accessibilityFriendly ? 'badge-success' : 'badge-info'}`}>
                 {route.accessibilityFriendly ? '♿ Accessible Grade' : '🏃 Standard Route'}
               </span>
             </div>
 
-            {route.warnings.length > 0 && (
-              <div role="alert" style={{ color: 'var(--color-warning)', display: 'flex', gap: '6px', alignItems: 'center', marginBottom: 'var(--spacing-sm)', fontWeight: 600 }}>
+            {warningList && (
+              <div role="alert" className="wayfinder-warning-box">
                 <ShieldAlert size={14} aria-hidden="true" />
-                <span>{route.warnings[0]}</span>
+                <span>{warningList[0]}</span>
               </div>
             )}
 
-            <ol style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '6px', color: 'var(--text-secondary)' }}>
+            <ol className="wayfinder-directions-list">
               {route.directions.map((step, idx) => (
-                <li key={idx}>{step}</li>
+                <li key={`step-${idx}`}>{step}</li>
               ))}
             </ol>
           </div>
@@ -383,21 +373,20 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
       </div>
 
       {/* 3. Sustainability Carbon Tracker */}
-      <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 'var(--spacing-sm)' }}>
+      <div className="glass-panel">
+        <div className="transit-calculator-header">
           <TreePine size={18} style={{ color: 'var(--color-success)' }} aria-hidden="true" />
           <h3 style={{ fontSize: '16px', fontWeight: 600 }}>Green Matchday Transit Calculator</h3>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-sm)' }}>
+        <div className="transit-calculator-row">
           <div>
             <label className="label" htmlFor="travelMethodSelect">Transit Mode</label>
             <select
               id="travelMethodSelect"
               value={travelMethod}
               onChange={(e) => setTravelMethod(e.target.value as TravelMethod)}
-              className="input-field"
-              style={{ background: '#120f35' }}
+              className="input-field transit-calculator-select"
             >
               <option value="walking">🏃 Walking / Cycling</option>
               <option value="metro">🚇 Electric Metro / Rail</option>
@@ -427,14 +416,14 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
 
         {co2Saved !== null && (
           <div
-            style={{ marginTop: 'var(--spacing-sm)', padding: 'var(--spacing-md)', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.15)', borderRadius: 'var(--radius-sm)' }}
+            className="transit-results-box"
             aria-live="polite"
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-success)' }}>♻️ Carbon Offset Captured</span>
+            <div className="transit-results-header">
+              <span className="transit-results-title">♻️ Carbon Offset Captured</span>
               <span className="badge badge-success">{co2Saved} kg CO₂ Saved</span>
             </div>
-            <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{ecoTip}</p>
+            <p className="transit-results-tip">{ecoTip}</p>
           </div>
         )}
       </div>

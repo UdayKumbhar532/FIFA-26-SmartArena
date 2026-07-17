@@ -24,6 +24,7 @@ export type IncidentPriority = 'Critical' | 'High' | 'Medium' | 'Low';
 
 /** A structured incident record produced by the AI or the offline simulator. */
 export interface ParsedIncident {
+  id: string; // Unique stable ID for React key reconciliation
   category: IncidentCategory;
   priority: IncidentPriority;
   location: string;
@@ -32,12 +33,23 @@ export interface ParsedIncident {
 }
 
 // ---------------------------------------------------------------------------
+// Chat Domain
+// ---------------------------------------------------------------------------
+
+/** A chat message record in the ArenaMind message log. */
+export interface ChatMessage {
+  id: string; // Unique stable ID for React key reconciliation
+  sender: 'user' | 'ai';
+  text: string;
+}
+
+// ---------------------------------------------------------------------------
 // Wayfinding Domain
 // ---------------------------------------------------------------------------
 
 /** A navigational route through the stadium produced by the AI or simulator. */
 export interface RouteDetail {
-  /** Ordered list of node names (e.g. ['Gate A', 'Concourse B', 'Section 104']). */
+  /** Ordered list of node names (e.g. ['Gate A', 'Concession B', 'Section 104']). */
   path: string[];
   accessibilityFriendly: boolean;
   warnings: string[];

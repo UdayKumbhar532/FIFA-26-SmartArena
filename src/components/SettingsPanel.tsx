@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ShieldCheck, Accessibility, Settings, Zap } from 'lucide-react';
 
 interface SettingsPanelProps {
@@ -23,39 +23,49 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onToggleHighContrast,
   hasApiKey,
 }) => {
+
+  // Dynamic status card styles computed efficiently using useMemo
+  const statusCardStyle = useMemo(() => ({
+    background: hasApiKey ? 'rgba(16, 185, 129, 0.06)' : 'rgba(249, 115, 22, 0.06)',
+    border: hasApiKey ? '1px solid rgba(16, 185, 129, 0.18)' : '1px solid rgba(249, 115, 22, 0.18)',
+  }), [hasApiKey]);
+
+  const statusIconColor = useMemo(() => ({
+    color: hasApiKey ? 'var(--color-success)' : 'var(--color-warning)',
+  }), [hasApiKey]);
+
   return (
     <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 'var(--spacing-sm)' }}>
+      <div className="settings-header-row">
         <Settings size={20} style={{ color: 'var(--color-primary)' }} aria-hidden="true" />
-        <h3 style={{ fontSize: '18px', fontWeight: 600, fontFamily: 'var(--font-header)' }}>System Settings</h3>
+        <h3 className="settings-header-title">System Settings</h3>
       </div>
 
       {/* AI Status — read-only indicator (no key visible) */}
       <div
+        className="settings-status-card"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          padding: 'var(--spacing-md)',
-          borderRadius: 'var(--radius-sm)',
-          background: hasApiKey ? 'rgba(16, 185, 129, 0.06)' : 'rgba(249, 115, 22, 0.06)',
-          border: hasApiKey ? '1px solid rgba(16, 185, 129, 0.18)' : '1px solid rgba(249, 115, 22, 0.18)',
+          background: statusCardStyle.background,
+          border: statusCardStyle.border,
         }}
         role="status"
         aria-label="AI engine status"
       >
         <Zap
           size={20}
-          style={{ color: hasApiKey ? 'var(--color-success)' : 'var(--color-warning)', flexShrink: 0 }}
+          style={{ color: statusIconColor.color, flexShrink: 0 }}
           aria-hidden="true"
         />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          <span style={{ fontSize: '13px', fontWeight: 700, color: hasApiKey ? 'var(--color-success)' : 'var(--color-warning)' }}>
+        <div className="settings-status-text-group">
+          <span
+            className="settings-status-title"
+            style={{ color: statusIconColor.color }}
+          >
             {hasApiKey ? '⚡ Live Gemini AI — Connected' : '🔌 Offline AI Simulator — Active'}
           </span>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+          <span className="settings-status-desc">
             {hasApiKey
               ? 'ArenaMind is powered by Google Gemini 1.5 Flash in real-time AI mode.'
               : 'Using high-fidelity local simulator fallback (no API key configured).'}
@@ -64,33 +74,23 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       </div>
 
       {/* Accessibility Controls */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--spacing-sm)',
-          marginTop: 'var(--spacing-sm)',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          paddingTop: 'var(--spacing-md)',
-        }}
-      >
-        <h4 style={{ fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div className="settings-controls-group">
+        <h4 className="settings-controls-title">
           <Accessibility size={16} style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
           Accessibility &amp; Display
         </h4>
 
         {/* Accessibility Routing Toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>Wheelchair &amp; Accessibility Routing</span>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+        <div className="settings-controls-row">
+          <div className="settings-controls-label-group">
+            <span className="settings-controls-label">Wheelchair &amp; Accessibility Routing</span>
+            <span className="settings-controls-desc">
               Prefer paths with low-slopes, ramps, and elevator overrides
             </span>
           </div>
           <button
             onClick={onToggleAccessibilityMode}
-            className={`btn ${accessibilityMode ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '6px 14px', fontSize: '12px', borderRadius: 'var(--radius-round)', flexShrink: 0 }}
+            className={`btn settings-controls-btn ${accessibilityMode ? 'btn-primary' : 'btn-secondary'}`}
             aria-pressed={accessibilityMode}
             aria-label={`Accessibility routing is ${accessibilityMode ? 'enabled' : 'disabled'}. Click to toggle.`}
           >
@@ -99,17 +99,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         </div>
 
         {/* High Contrast Toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>High Contrast Theme</span>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+        <div className="settings-controls-row">
+          <div className="settings-controls-label-group">
+            <span className="settings-controls-label">High Contrast Theme</span>
+            <span className="settings-controls-desc">
               Maximize readability using deep black overrides
             </span>
           </div>
           <button
             onClick={onToggleHighContrast}
-            className={`btn ${highContrast ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '6px 14px', fontSize: '12px', borderRadius: 'var(--radius-round)', flexShrink: 0 }}
+            className={`btn settings-controls-btn ${highContrast ? 'btn-primary' : 'btn-secondary'}`}
             aria-pressed={highContrast}
             aria-label={`High contrast theme is ${highContrast ? 'enabled' : 'disabled'}. Click to toggle.`}
           >
@@ -119,21 +118,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       </div>
 
       {/* Security notice — reassures users, reveals nothing */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '8px',
-          padding: '10px',
-          borderRadius: 'var(--radius-sm)',
-          background: 'rgba(6, 182, 212, 0.04)',
-          border: '1px solid rgba(6, 182, 212, 0.12)',
-          fontSize: '11px',
-          color: 'var(--text-secondary)',
-          alignItems: 'flex-start',
-        }}
-        role="note"
-      >
-        <ShieldCheck size={14} style={{ color: 'var(--color-info)', marginTop: '2px', flexShrink: 0 }} aria-hidden="true" />
+      <div className="settings-security-card" role="note">
+        <ShieldCheck size={14} className="settings-security-card-icon" aria-hidden="true" />
         <span>
           <strong>Secured by design:</strong> AI credentials are embedded at build time and
           are not accessible through this interface. All AI requests are processed through

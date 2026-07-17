@@ -217,6 +217,7 @@ describe('Staff Command Dashboard UI', () => {
 
     const activeIncidents = [
       {
+        id: 'test-inc-1',
         category: 'Facilities' as const,
         priority: 'Medium' as const,
         location: 'Gate A',
