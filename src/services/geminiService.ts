@@ -98,8 +98,8 @@ const getGeminiModel = (runtimeKey?: string) => {
   if (!key) return null;
   try {
     const genAI = new GoogleGenerativeAI(key);
-    // gemini-1.5-flash: fast, cost-effective for real-time operational commands
-    return genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    // gemini-2.0-flash: fast, cost-effective, current stable model for real-time operational commands
+    return genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
   } catch (error) {
     console.error('Failed to initialise Gemini client:', error);
     return null;
