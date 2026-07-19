@@ -9,6 +9,7 @@ interface FanCompanionProps {
   onSetWaypoints: (path: string[]) => void;
   selectedNode: string | null;
   onSelectNode: (node: string | null) => void;
+  triggerToast?: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
 export const FanCompanion: React.FC<FanCompanionProps> = memo(({
@@ -16,6 +17,7 @@ export const FanCompanion: React.FC<FanCompanionProps> = memo(({
   onSetWaypoints,
   selectedNode,
   onSelectNode,
+  triggerToast,
 }) => {
   // Chat state
   const [chatInput, setChatInput]   = useState('');
@@ -81,15 +83,21 @@ export const FanCompanion: React.FC<FanCompanionProps> = memo(({
     try {
       const response = await chatWithAI(text, `accessibilityMode: ${accessibilityMode}`);
       setMessages((prev) => [...prev, { id: aiMsgId, sender: 'ai', text: response }]);
+      if (triggerToast) {
+        triggerToast('🤖 AI Assistant replied', 'success');
+      }
     } catch {
       setMessages((prev) => [
         ...prev,
         { id: aiMsgId, sender: 'ai', text: 'Sorry, I encountered an error. Please try again.' },
       ]);
+      if (triggerToast) {
+        triggerToast('❌ AI Assistant response failed', 'error');
+      }
     } finally {
       setChatLoading(false);
     }
-  }, [chatInput, chatCounter, accessibilityMode]);
+  }, [chatInput, chatCounter, accessibilityMode, triggerToast]);
 
   // ── Text-to-Speech ────────────────────────────────────────────────────────
 
@@ -119,18 +127,27 @@ export const FanCompanion: React.FC<FanCompanionProps> = memo(({
       const routeDetail = await getWayfindingRoute(startPoint, endPoint, accessibilityMode);
       setRoute(routeDetail);
       onSetWaypoints(routeDetail.path);
+      if (triggerToast) {
+        triggerToast(`📍 Route Calculated: ${routeDetail.estimatedTimeMin} mins (${routeDetail.directions.length} steps)`, 'success');
+      }
     } catch (err) {
       console.error('Route lookup failed:', err);
+      if (triggerToast) {
+        triggerToast('❌ Failed to calculate stadium route. Please try again.', 'error');
+      }
     } finally {
       setRouteLoading(false);
     }
-  }, [startPoint, endPoint, accessibilityMode, onSetWaypoints]);
+  }, [startPoint, endPoint, accessibilityMode, onSetWaypoints, triggerToast]);
 
   const handleClearRoute = useCallback(() => {
     setRoute(null);
     onSetWaypoints([]);
     onSelectNode(null);
-  }, [onSetWaypoints, onSelectNode]);
+    if (triggerToast) {
+      triggerToast('🧹 Route path cleared', 'info');
+    }
+  }, [onSetWaypoints, onSelectNode, triggerToast]);
 
   // ── Sustainability Carbon Calculator ──────────────────────────────────────
 
@@ -369,7 +386,7 @@ export const FanCompanion: React.FC<FanCompanionProps> = memo(({
 
             <ol className="wayfinder-directions-list">
               {route.directions.map((step, idx) => (
-                <li key={`step-${idx}`}>{step}</li>
+                <li key={`step-${idx}`} className="wayfinder-direction-step">{step}</li>
               ))}
             </ol>
           </div>

@@ -62,7 +62,28 @@ function LoaderFallback() {
   );
 }
 
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'warning' | 'info';
+}
+
 export default function App() {
+  // ── Toast Notifications State ─────────────────────────────────────────────
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const triggerToast = useCallback((message: string, type: Toast['type'] = 'info') => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
   // ── View & Navigation State ──────────────────────────────────────────────
   const [selectedView, setSelectedView] = useState<AppView>('fan');
   const [isMenuOpen, setIsMenuOpen]     = useState<boolean>(false);
@@ -148,9 +169,16 @@ export default function App() {
 
   /** Toggles the emergency stop dispatch lockdown. */
   const handleToggleEmergencyStop = useCallback(() => {
-    setEmergencyStopDispatch((prev) => !prev);
+    setEmergencyStopDispatch((prev) => {
+      const next = !prev;
+      triggerToast(
+        next ? '🚨 EMERGENCY DISPATCH LOCKED DOWN' : '✅ Emergency stop dispatch deactivated',
+        next ? 'error' : 'info'
+      );
+      return next;
+    });
     setIsMenuOpen(false);
-  }, []);
+  }, [triggerToast]);
 
   /** Prepends a newly parsed incident to the queue with a unique stable ID. */
   const handleAddIncident = useCallback((newIncident: Omit<ParsedIncident, 'id'>) => {
@@ -160,22 +188,43 @@ export default function App() {
       { ...newIncident, id: newId },
       ...prevIncidents,
     ]);
-  }, []);
+    triggerToast(`⚠️ Incident Reported: ${newIncident.category} at ${newIncident.location}`, 'warning');
+  }, [triggerToast]);
 
   /** Removes a resolved incident by matching its stable ID. */
   const handleResolveIncident = useCallback((idx: number) => {
-    setIncidents((prev) => prev.filter((_, i) => i !== idx));
-  }, []);
+    setIncidents((prev) => {
+      const incident = prev[idx];
+      if (incident) {
+        triggerToast(`✅ Incident Resolved: ${incident.category} at ${incident.location}`, 'success');
+      }
+      return prev.filter((_, i) => i !== idx);
+    });
+  }, [triggerToast]);
 
   /** Toggles accessibility routing mode. */
   const handleToggleAccessibilityMode = useCallback(() => {
-    setAccessibilityMode((prev) => !prev);
-  }, []);
+    setAccessibilityMode((prev) => {
+      const next = !prev;
+      triggerToast(
+        next ? '♿ Accessibility Mode enabled (wheelchair routes prioritized)' : '🏃 Standard routing active',
+        'info'
+      );
+      return next;
+    });
+  }, [triggerToast]);
 
   /** Toggles high contrast display theme. */
   const handleToggleHighContrast = useCallback(() => {
-    setHighContrast((prev) => !prev);
-  }, []);
+    setHighContrast((prev) => {
+      const next = !prev;
+      triggerToast(
+        next ? '👁️ High Contrast mode enabled' : '🎨 Standard theme restored',
+        'info'
+      );
+      return next;
+    });
+  }, [triggerToast]);
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
@@ -395,6 +444,7 @@ export default function App() {
                     onSetWaypoints={setHighlightedPath}
                     selectedNode={selectedNode}
                     onSelectNode={setSelectedNode}
+                    triggerToast={triggerToast}
                   />
                 )}
 
@@ -429,6 +479,26 @@ export default function App() {
       <footer className="app-footer">
         <p>© 2026 FIFA SmartArena Operations Challenge. Powered by Gemini Generative AI.</p>
       </footer>
+
+      {/* ── Toast Overlay Container ── */}
+      <div className="toast-container" role="log" aria-live="polite" aria-relevant="additions">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`toast-item toast-item--${toast.type}`}
+            role="status"
+          >
+            <span>{toast.message}</span>
+            <button
+              onClick={() => removeToast(toast.id)}
+              className="toast-close-btn"
+              aria-label="Close notification"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
 
     </div>
   );
