@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { Send, Compass, ShieldAlert, Sparkles, Volume2, TreePine } from 'lucide-react';
 import { chatWithAI, getWayfindingRoute } from '../services/geminiService';
 import type { RouteDetail, TravelMethod, ChatMessage } from '../types';
@@ -11,7 +11,7 @@ interface FanCompanionProps {
   onSelectNode: (node: string | null) => void;
 }
 
-export const FanCompanion: React.FC<FanCompanionProps> = ({
+export const FanCompanion: React.FC<FanCompanionProps> = memo(({
   accessibilityMode,
   onSetWaypoints,
   selectedNode,
@@ -434,4 +434,4 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
 
     </div>
   );
-};
+});

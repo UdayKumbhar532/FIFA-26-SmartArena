@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, memo } from 'react';
 import { ShieldAlert, Users, RotateCw, PlusCircle, CheckCircle, Trash2, Flame } from 'lucide-react';
 import { parseIncidentReport } from '../services/geminiService';
 import type { ParsedIncident, CrowdDensities } from '../types';
@@ -24,7 +24,7 @@ interface BinState {
   C: number;
 }
 
-export const StaffDashboard: React.FC<StaffDashboardProps> = ({
+export const StaffDashboard: React.FC<StaffDashboardProps> = memo(({
   crowdDensities,
   onUpdateCrowd,
   incidents,
@@ -373,4 +373,4 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
 
     </div>
   );
-};
+});

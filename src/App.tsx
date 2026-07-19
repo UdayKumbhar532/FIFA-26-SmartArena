@@ -1,12 +1,66 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, lazy, Suspense, Component, type ReactNode } from 'react';
 import { Sparkles, Menu, X, BarChart2, Users, ShieldAlert, AlertOctagon, Headphones } from 'lucide-react';
-import { StadiumMap } from './components/StadiumMap';
-import { FanCompanion } from './components/FanCompanion';
-import { StaffDashboard } from './components/StaffDashboard';
-import { SettingsPanel } from './components/SettingsPanel';
 import type { ParsedIncident, AppView, CrowdDensities } from './types';
 import { DEFAULT_CROWD_DENSITIES, MENU_ITEMS, DEFAULT_INCIDENTS } from './constants';
 import './styles/global.css';
+
+// Lazy loading feature components for code splitting & maximum loading efficiency
+const StadiumMap = lazy(() => import('./components/StadiumMap').then(m => ({ default: m.StadiumMap })));
+const FanCompanion = lazy(() => import('./components/FanCompanion').then(m => ({ default: m.FanCompanion })));
+const StaffDashboard = lazy(() => import('./components/StaffDashboard').then(m => ({ default: m.StaffDashboard })));
+const SettingsPanel = lazy(() => import('./components/SettingsPanel').then(m => ({ default: m.SettingsPanel })));
+
+// Error Boundary for dynamic chunk loading failures
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  public state: ErrorBoundaryState = {
+    hasError: false
+  };
+
+  public static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+  }
+
+  public render() {
+    if (this.state.hasError) {
+      return (
+        <div className="glass-panel" style={{ padding: '24px', textAlign: 'center' }}>
+          <h2 style={{ color: 'var(--color-danger)', marginBottom: '12px' }}>Operational View Unavailable</h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>
+            There was a connection or rendering issue loading this component.
+          </p>
+          <button className="btn btn-primary" onClick={() => this.setState({ hasError: false })}>
+            Retry Loading
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Fallback Loader Component
+function LoaderFallback() {
+  return (
+    <div className="glass-panel flex-row-center" style={{ justifyContent: 'center', minHeight: '300px' }}>
+      <div className="chat-loading-row">
+        <span className="badge-critical-pulse">Loading SmartArena interface...</span>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   // ── View & Navigation State ──────────────────────────────────────────────
@@ -319,45 +373,53 @@ export default function App() {
         <div className="layout-grid">
           {/* Left Panel: Stadium Map — always visible for situational awareness */}
           <div className="sticky-sidebar">
-            <StadiumMap
-              selectedNode={selectedNode}
-              onSelectNode={setSelectedNode}
-              crowdDensities={crowdDensities}
-              highlightedPath={highlightedPath}
-            />
+            <ErrorBoundary>
+              <Suspense fallback={<LoaderFallback />}>
+                <StadiumMap
+                  selectedNode={selectedNode}
+                  onSelectNode={setSelectedNode}
+                  crowdDensities={crowdDensities}
+                  highlightedPath={highlightedPath}
+                />
+              </Suspense>
+            </ErrorBoundary>
           </div>
 
           {/* Right Panel: Role Views */}
           <div className="animate-fade-in">
-            {selectedView === 'fan' && (
-              <FanCompanion
-                accessibilityMode={accessibilityMode}
-                onSetWaypoints={setHighlightedPath}
-                selectedNode={selectedNode}
-                onSelectNode={setSelectedNode}
-              />
-            )}
+            <ErrorBoundary>
+              <Suspense fallback={<LoaderFallback />}>
+                {selectedView === 'fan' && (
+                  <FanCompanion
+                    accessibilityMode={accessibilityMode}
+                    onSetWaypoints={setHighlightedPath}
+                    selectedNode={selectedNode}
+                    onSelectNode={setSelectedNode}
+                  />
+                )}
 
-            {selectedView === 'staff' && (
-              <StaffDashboard
-                crowdDensities={crowdDensities}
-                onUpdateCrowd={setCrowdDensities}
-                incidents={incidents}
-                onAddIncident={handleAddIncident}
-                onResolveIncident={handleResolveIncident}
-                emergencyStopDispatch={emergencyStopDispatch}
-              />
-            )}
+                {selectedView === 'staff' && (
+                  <StaffDashboard
+                    crowdDensities={crowdDensities}
+                    onUpdateCrowd={setCrowdDensities}
+                    incidents={incidents}
+                    onAddIncident={handleAddIncident}
+                    onResolveIncident={handleResolveIncident}
+                    emergencyStopDispatch={emergencyStopDispatch}
+                  />
+                )}
 
-            {selectedView === 'settings' && (
-              <SettingsPanel
-                accessibilityMode={accessibilityMode}
-                onToggleAccessibilityMode={handleToggleAccessibilityMode}
-                highContrast={highContrast}
-                onToggleHighContrast={handleToggleHighContrast}
-                hasApiKey={Boolean(import.meta.env.VITE_GEMINI_API_KEY)}
-              />
-            )}
+                {selectedView === 'settings' && (
+                  <SettingsPanel
+                    accessibilityMode={accessibilityMode}
+                    onToggleAccessibilityMode={handleToggleAccessibilityMode}
+                    highContrast={highContrast}
+                    onToggleHighContrast={handleToggleHighContrast}
+                    hasApiKey={Boolean(import.meta.env.VITE_GEMINI_API_KEY)}
+                  />
+                )}
+              </Suspense>
+            </ErrorBoundary>
           </div>
         </div>
 

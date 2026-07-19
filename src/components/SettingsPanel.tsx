@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { ShieldCheck, Accessibility, Settings, Zap } from 'lucide-react';
 
 interface SettingsPanelProps {
@@ -16,7 +16,7 @@ interface SettingsPanelProps {
  * It is baked into the build at compile time via the VITE_GEMINI_API_KEY
  * environment variable, invisible to end users.
  */
-export const SettingsPanel: React.FC<SettingsPanelProps> = ({
+export const SettingsPanel: React.FC<SettingsPanelProps> = memo(({
   accessibilityMode,
   onToggleAccessibilityMode,
   highContrast,
@@ -119,4 +119,4 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       </div>
     </div>
   );
-};
+});
