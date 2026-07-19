@@ -151,7 +151,7 @@ h1, h2, h3, h4, h5, h6 {
   background: linear-gradient(135deg, var(--color-accent), #b45309);
   width: 36px;
   height: 36px;
-  borderRadius: 50%;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -395,7 +395,7 @@ h1, h2, h3, h4, h5, h6 {
 .chat-panel-status-tag {
   font-size: 11px;
   color: var(--color-success);
-  fontWeight: 600;
+  font-weight: 600;
 }
 
 .chat-tts-error-alert {
@@ -672,6 +672,22 @@ h1, h2, h3, h4, h5, h6 {
   gap: 4px;
 }
 
+/* BEM severity modifiers — eliminates all inline style={{ background, border }} */
+.staff-suggestion-alert--critical {
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+.staff-suggestion-alert--high {
+  background: rgba(249, 115, 22, 0.05);
+  border: 1px solid rgba(249, 115, 22, 0.15);
+}
+
+.staff-suggestion-alert--ok {
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
 .staff-suggestion-alert-title {
   font-size: 11px;
   font-weight: 700;
@@ -714,7 +730,7 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid rgba(239, 68, 68, 0.25);
   color: var(--color-danger);
   font-size: 12px;
-  fontWeight: 600;
+  font-weight: 600;
 }
 
 .staff-presets-group {
@@ -738,7 +754,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .incident-queue-header {
   font-size: 16px;
-  fontWeight: 600;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -894,7 +910,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .settings-header-title {
   font-size: 18px;
-  fontWeight: 600;
+  font-weight: 600;
   font-family: var(--font-header);
 }
 
@@ -1002,3 +1018,169 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   justify-content: center;
 }
+
+/* =========================================================================
+   HAMBURGER BUTTON (header menu toggle)
+   ========================================================================= */
+.header-menu-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.header-menu-btn.is-open {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.4);
+  color: var(--color-primary);
+}
+
+/* =========================================================================
+   LOGO ACCENT SPAN
+   ========================================================================= */
+.logo-accent {
+  color: var(--color-accent);
+}
+
+/* =========================================================================
+   PANEL HEADER ROW (shared heading + icon pattern)
+   ========================================================================= */
+.panel-heading {
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-heading-sm {
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Icon colour helpers – avoids repeated inline style={{ color }} */
+.icon-primary  { color: var(--color-primary);  }
+.icon-accent   { color: var(--color-accent);   }
+.icon-success  { color: var(--color-success);  }
+.icon-warning  { color: var(--color-warning);  }
+.icon-danger   { color: var(--color-danger);   }
+.icon-info     { color: var(--color-info);     }
+
+/* =========================================================================
+   FLEX UTILITY CLASSES (replaces scattered inline flex styles)
+   ========================================================================= */
+.flex-col-gap-sm  { display: flex; flex-direction: column; gap: var(--spacing-sm);  }
+.flex-col-gap-md  { display: flex; flex-direction: column; gap: var(--spacing-md);  }
+.flex-col-gap-lg  { display: flex; flex-direction: column; gap: var(--spacing-lg);  }
+.flex-gap-sm      { display: flex; gap: var(--spacing-sm);  }
+.flex-gap-md      { display: flex; gap: var(--spacing-md);  }
+.flex-row-center  { display: flex; align-items: center;     }
+.flex-shrink-0    { flex-shrink: 0; }
+
+/* =========================================================================
+   CHAT MESSAGE ROW ALIGNMENT
+   ========================================================================= */
+.chat-message-row-user { justify-content: flex-end;   }
+.chat-message-row-ai   { justify-content: flex-start; }
+
+/* =========================================================================
+   TTS BUTTON ICON STATE
+   ========================================================================= */
+.chat-tts-btn-icon-speaking { color: var(--color-accent); }
+.chat-tts-btn-label         { font-size: 10px; }
+
+/* =========================================================================
+   WAYFINDER / TRANSIT BUTTON FLEX
+   ========================================================================= */
+.wayfinder-submit-btn { flex: 1; }
+
+/* =========================================================================
+   CALCULATE BUTTON TEXT
+   ========================================================================= */
+.btn-accent-text { color: var(--bg-primary); }
+
+/* =========================================================================
+   SETTINGS PANEL — COLUMN LAYOUT
+   ========================================================================= */
+.settings-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+/* =========================================================================
+   STADIUM MAP SVG BLOCK
+   ========================================================================= */
+.map-svg-element { display: block; }
+
+/* =========================================================================
+   STAFF CROWD CONTROLLER PANEL BODY
+   ========================================================================= */
+.crowd-controller-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+/* =========================================================================
+   ANALYTICS / ECO BRIGADE PANEL BODY
+   ========================================================================= */
+.analytics-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+/* =========================================================================
+   INCIDENT QUEUE — ICON + TEXT COLOUR HELPERS
+   ========================================================================= */
+.incident-queue-count-icon { color: var(--color-danger);  }
+.incident-empty-icon       { color: var(--color-success); }
+.incident-empty-label      { font-size: 13px; }
+
+/* =========================================================================
+   CROWD DENSITY VALUE COLOUR VARIANTS
+   ========================================================================= */
+.density-value-critical { color: var(--color-danger);  }
+.density-value-high     { color: var(--color-warning); }
+.density-value-ok       { color: var(--color-success); }
+
+/* =========================================================================
+   CRITICAL BADGE ANIMATION
+   ========================================================================= */
+.badge-critical-pulse {
+  animation: pulse 1.5s infinite;
+}
+
+.badge-critical-icon {
+  margin-right: 3px;
+  vertical-align: middle;
+  display: inline;
+}
+
+/* =========================================================================
+   SETTINGS STATUS CARD — API key state variants
+   ========================================================================= */
+.settings-status-card--connected {
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.18);
+}
+
+.settings-status-card--offline {
+  background: rgba(249, 115, 22, 0.06);
+  border: 1px solid rgba(249, 115, 22, 0.18);
+}
+
+.settings-status-icon-connected { color: var(--color-success); }
+.settings-status-icon-offline   { color: var(--color-warning); }

@@ -113,10 +113,10 @@ export const StadiumMap: React.FC<StadiumMapProps> = memo(({
   const gateTextFill = (name: string) => (isNodeSelected(name) ? '#000' : '#fff');
 
   return (
-    <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+    <div className="glass-panel flex-col-gap-md">
       {/* Header row */}
       <div className="map-legend-container">
-        <h3 style={{ fontSize: '18px', fontWeight: 600 }}>Interactive Stadium Layout</h3>
+        <h3 className="panel-heading">Interactive Stadium Layout</h3>
         {/* Density legend */}
         <div className="map-legend-list" aria-label="Crowd density legend">
           <span className="map-legend-item">
@@ -140,7 +140,7 @@ export const StadiumMap: React.FC<StadiumMapProps> = memo(({
           viewBox="0 0 800 500"
           width="100%"
           height="100%"
-          style={{ display: 'block' }}
+          className="map-svg-element"
           aria-label="Stadium interactive map"
           role="img"
         >

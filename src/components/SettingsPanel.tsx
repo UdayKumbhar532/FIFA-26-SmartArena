@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { ShieldCheck, Accessibility, Settings, Zap } from 'lucide-react';
 
 interface SettingsPanelProps {
@@ -24,44 +24,35 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   hasApiKey,
 }) => {
 
-  // Dynamic status card styles computed efficiently using useMemo
-  const statusCardStyle = useMemo(() => ({
-    background: hasApiKey ? 'rgba(16, 185, 129, 0.06)' : 'rgba(249, 115, 22, 0.06)',
-    border: hasApiKey ? '1px solid rgba(16, 185, 129, 0.18)' : '1px solid rgba(249, 115, 22, 0.18)',
-  }), [hasApiKey]);
-
-  const statusIconColor = useMemo(() => ({
-    color: hasApiKey ? 'var(--color-success)' : 'var(--color-warning)',
-  }), [hasApiKey]);
-
   return (
-    <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+    <div className="glass-panel settings-panel-body">
 
       {/* Header */}
       <div className="settings-header-row">
-        <Settings size={20} style={{ color: 'var(--color-primary)' }} aria-hidden="true" />
+        <Settings size={20} className="icon-primary" aria-hidden="true" />
         <h3 className="settings-header-title">System Settings</h3>
       </div>
 
       {/* AI Status — read-only indicator (no key visible) */}
       <div
-        className="settings-status-card"
-        style={{
-          background: statusCardStyle.background,
-          border: statusCardStyle.border,
-        }}
+        className={`settings-status-card ${
+          hasApiKey ? 'settings-status-card--connected' : 'settings-status-card--offline'
+        }`}
         role="status"
         aria-label="AI engine status"
       >
         <Zap
           size={20}
-          style={{ color: statusIconColor.color, flexShrink: 0 }}
+          className={`flex-shrink-0 ${
+            hasApiKey ? 'settings-status-icon-connected' : 'settings-status-icon-offline'
+          }`}
           aria-hidden="true"
         />
         <div className="settings-status-text-group">
           <span
-            className="settings-status-title"
-            style={{ color: statusIconColor.color }}
+            className={`settings-status-title ${
+              hasApiKey ? 'settings-status-icon-connected' : 'settings-status-icon-offline'
+            }`}
           >
             {hasApiKey ? '⚡ Live Gemini AI — Connected' : '🔌 Offline AI Simulator — Active'}
           </span>
@@ -76,7 +67,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       {/* Accessibility Controls */}
       <div className="settings-controls-group">
         <h4 className="settings-controls-title">
-          <Accessibility size={16} style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+          <Accessibility size={16} className="icon-accent" aria-hidden="true" />
           Accessibility &amp; Display
         </h4>
 

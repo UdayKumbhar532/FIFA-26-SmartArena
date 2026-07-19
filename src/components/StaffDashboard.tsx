@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { ShieldAlert, Users, RotateCw, PlusCircle, CheckCircle, Trash2, Flame } from 'lucide-react';
 import { parseIncidentReport } from '../services/geminiService';
 import type { ParsedIncident, CrowdDensities } from '../types';
@@ -67,31 +67,14 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     return '✅ STABLE FLOW: Crowd levels at all sections are balanced. Concourse lanes remain clear.';
   }, [crowdDensities]);
 
-  // Derived styling configuration for the crowd suggestion box
-  const crowdAdviceStyles = useMemo(() => {
-    const isCritical = crowdAdvice.includes('CRITICAL');
-    const isHigh     = crowdAdvice.includes('HIGH');
-
-    const background = isCritical
-      ? 'rgba(239, 68, 68, 0.05)'
-      : isHigh
-      ? 'rgba(249, 115, 22, 0.05)'
-      : 'rgba(16, 185, 129, 0.05)';
-
-    const border = isCritical
-      ? '1px solid rgba(239, 68, 68, 0.15)'
-      : isHigh
-      ? '1px solid rgba(249, 115, 22, 0.15)'
-      : '1px solid rgba(16, 185, 129, 0.15)';
-
-    const color = isCritical
-      ? 'var(--color-danger)'
-      : isHigh
-      ? 'var(--color-warning)'
-      : 'var(--color-success)';
-
-    return { background, border, color };
-  }, [crowdAdvice]);
+  // Derived severity level for CSS class-based theming
+  const crowdAdviceSeverity = useMemo((): 'critical' | 'high' | 'ok' => {
+    const sec112 = crowdDensities['Section 112'] || 0;
+    const sec106 = crowdDensities['Section 106'] || 0;
+    if (sec112 > CROWD_CRITICAL_THRESHOLD) return 'critical';
+    if (sec106 > CROWD_HIGH_THRESHOLD)     return 'high';
+    return 'ok';
+  }, [crowdDensities]);
 
   // Handle Incident Submission
   const handleReportIncident = useCallback(async (e: React.FormEvent) => {
@@ -153,12 +136,12 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     confetti({ particleCount: 20, colors: ['#10b981'] });
   }, []);
 
-  const getPriorityBadge = (priority: string) => {
+  const getPriorityBadge = useCallback((priority: string) => {
     switch (priority) {
       case 'Critical':
         return (
-          <span className="badge badge-danger" style={{ animation: 'pulse 1.5s infinite' }}>
-            <Flame size={10} style={{ marginRight: '3px' }} aria-hidden="true" /> Critical
+          <span className="badge badge-danger badge-critical-pulse">
+            <Flame size={10} className="badge-critical-icon" aria-hidden="true" /> Critical
           </span>
         );
       case 'High':
@@ -168,7 +151,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
       default:
         return <span className="badge badge-info">Low</span>;
     }
-  };
+  }, []);
 
   return (
     <div className="staff-dashboard-container">
@@ -177,10 +160,10 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
       <div className="staff-dashboard-subgrid">
 
         {/* Crowd controller */}
-        <div id="crowd-heatmap" className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
+        <div id="crowd-heatmap" className="glass-panel crowd-controller-body">
           <div className="staff-panel-header-row">
-            <h3 style={{ fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Users size={18} style={{ color: 'var(--color-primary)' }} aria-hidden="true" /> Live Crowd Control Simulator
+            <h3 className="panel-heading">
+              <Users size={18} className="icon-primary" aria-hidden="true" /> Live Crowd Control Simulator
             </h3>
             <button onClick={handleSimulateCrowd} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>
               <RotateCw size={12} style={{ marginRight: '4px' }} aria-hidden="true" /> Refresh Simulation
@@ -193,10 +176,13 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
               <div key={`density-${sec}`} className="staff-density-card">
                 <span className="staff-density-card-label">{sec}</span>
                 <span
-                  className="staff-density-card-value"
-                  style={{
-                    color: val > CROWD_CRITICAL_THRESHOLD ? 'var(--color-danger)' : val > 50 ? 'var(--color-warning)' : 'var(--color-success)',
-                  }}
+                  className={`staff-density-card-value ${
+                    val > CROWD_CRITICAL_THRESHOLD
+                      ? 'density-value-critical'
+                      : val > 50
+                      ? 'density-value-high'
+                      : 'density-value-ok'
+                  }`}
                 >
                   {val}%
                 </span>
@@ -206,20 +192,19 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
 
           {/* AI Crowd routing recommendation */}
           <div
-            className="staff-suggestion-alert"
-            style={{
-              background: crowdAdviceStyles.background,
-              border: crowdAdviceStyles.border,
-            }}
+            className={`staff-suggestion-alert staff-suggestion-alert--${crowdAdviceSeverity}`}
             aria-live="polite"
           >
             <span
-              className="staff-suggestion-alert-title"
-              style={{ color: crowdAdviceStyles.color }}
+              className={`staff-suggestion-alert-title ${
+                crowdAdviceSeverity === 'critical' ? 'icon-danger'
+                : crowdAdviceSeverity === 'high'   ? 'icon-warning'
+                : 'icon-success'
+              }`}
             >
               🧠 ArenaMind Operational Suggestion
             </span>
-            <p style={{ color: 'var(--text-primary)' }}>{crowdAdvice}</p>
+            <p>{crowdAdvice}</p>
           </div>
         </div>
 
@@ -231,8 +216,8 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
         {/* Report form */}
         <div className="glass-panel staff-form-wrapper">
           <div>
-            <h3 style={{ fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <PlusCircle size={18} style={{ color: 'var(--color-accent)' }} aria-hidden="true" /> Staff Incident Dispatcher
+            <h3 className="panel-heading">
+              <PlusCircle size={18} className="icon-accent" aria-hidden="true" /> Staff Incident Dispatcher
             </h3>
             <p className="staff-form-desc">AI parses raw text into structured dispatch commands automatically.</p>
           </div>
@@ -271,13 +256,13 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
         {/* Incident Queue */}
         <div id="incident-queue" className="glass-panel incident-queue-panel">
           <h3 className="incident-queue-header">
-            <ShieldAlert size={18} style={{ color: 'var(--color-danger)' }} aria-hidden="true" /> Active Dispatch Queue ({incidents.length})
+            <ShieldAlert size={18} className="incident-queue-count-icon" aria-hidden="true" /> Active Dispatch Queue ({incidents.length})
           </h3>
 
           {incidents.length === 0 ? (
             <div className="incident-queue-empty-box">
-              <CheckCircle size={32} style={{ color: 'var(--color-success)' }} aria-hidden="true" />
-              <span style={{ fontSize: '13px' }}>All clear! No active incidents.</span>
+              <CheckCircle size={32} className="incident-empty-icon" aria-hidden="true" />
+              <span className="incident-empty-label">All clear! No active incidents.</span>
             </div>
           ) : (
             <div className="incident-queue-list">
@@ -315,12 +300,12 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
       </div>
 
       {/* Lower Section: Eco-bins */}
-      <div id="analytics-section" className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+      <div id="analytics-section" className="glass-panel analytics-panel-body">
         <div className="eco-brigade-header-row">
-          <h3 style={{ fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Trash2 size={18} style={{ color: 'var(--color-success)' }} aria-hidden="true" /> Eco-Brigade Waste monitors
+          <h3 className="panel-heading">
+            <Trash2 size={18} className="icon-success" aria-hidden="true" /> Eco-Brigade Waste monitors
           </h3>
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div className="flex-gap-sm">
             <button onClick={handleAddWaste} className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }}>
               Simulate Fan Waste
             </button>

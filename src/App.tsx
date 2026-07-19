@@ -27,8 +27,9 @@ export default function App() {
   // ── Crowd & Incident State ───────────────────────────────────────────────
   const [crowdDensities, setCrowdDensities] = useState<CrowdDensities>(DEFAULT_CROWD_DENSITIES);
 
-  // Counter to generate unique incident IDs
-  const [incidentCounter, setIncidentCounter] = useState<number>(1);
+  // Ref-based counter: generates unique IDs without triggering re-renders.
+  // No UI depends on this value directly, so useRef is more efficient than useState.
+  const incidentCounterRef = useRef<number>(1);
 
   // Pre-configured incidents using stable IDs
   const [incidents, setIncidents] = useState<ParsedIncident[]>(() => [...DEFAULT_INCIDENTS]);
@@ -99,14 +100,12 @@ export default function App() {
 
   /** Prepends a newly parsed incident to the queue with a unique stable ID. */
   const handleAddIncident = useCallback((newIncident: Omit<ParsedIncident, 'id'>) => {
-    setIncidentCounter((prevCounter) => {
-      const newId = `inc-dynamic-${prevCounter}`;
-      setIncidents((prevIncidents) => [
-        { ...newIncident, id: newId },
-        ...prevIncidents,
-      ]);
-      return prevCounter + 1;
-    });
+    const newId = `inc-dynamic-${incidentCounterRef.current}`;
+    incidentCounterRef.current += 1;
+    setIncidents((prevIncidents) => [
+      { ...newIncident, id: newId },
+      ...prevIncidents,
+    ]);
   }, []);
 
   /** Removes a resolved incident by matching its stable ID. */
@@ -259,20 +258,7 @@ export default function App() {
             {/* Hamburger Menu Toggle Button */}
             <button
               onClick={() => setIsMenuOpen((prev) => !prev)}
-              style={{
-                background: isMenuOpen ? 'rgba(139, 92, 246, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                border: `1px solid ${isMenuOpen ? 'rgba(139, 92, 246, 0.4)' : 'rgba(255,255,255,0.08)'}`,
-                color: isMenuOpen ? 'var(--color-primary)' : 'var(--text-primary)',
-                borderRadius: '8px',
-                width: '40px',
-                height: '40px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                flexShrink: 0,
-              }}
+              className={`header-menu-btn${isMenuOpen ? ' is-open' : ''}`}
               aria-label={isMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
               aria-expanded={isMenuOpen}
               aria-controls="main-nav-drawer"
@@ -287,7 +273,7 @@ export default function App() {
               </div>
               <div className="header-logo-text-wrapper">
                 <h1 className="header-logo-title">
-                  FIFA 26 <span style={{ color: 'var(--color-accent)' }}>SmartArena</span>
+                  FIFA 26 <span className="logo-accent">SmartArena</span>
                 </h1>
                 <p className="header-logo-subtitle">
                   AI Stadium Operations &amp; Fan Portal

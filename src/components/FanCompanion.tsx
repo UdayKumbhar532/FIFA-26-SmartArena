@@ -164,8 +164,8 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
         {/* Panel header */}
         <div className="chat-panel-header">
           <div className="chat-panel-header-title">
-            <Sparkles size={18} style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
-            <h3 style={{ fontSize: '16px', fontWeight: 600 }}>ArenaMind Assistant</h3>
+            <Sparkles size={18} className="icon-accent" aria-hidden="true" />
+            <h3 className="panel-heading">ArenaMind Assistant</h3>
           </div>
           <span className="chat-panel-status-tag">
             ⚡ Gemini AI Active
@@ -188,7 +188,12 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
           className="chat-messages-container"
         >
           {messages.map((msg) => (
-            <div key={msg.id} className="chat-message-row" style={{ justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}>
+            <div
+              key={msg.id}
+              className={`chat-message-row ${
+                msg.sender === 'user' ? 'chat-message-row-user' : 'chat-message-row-ai'
+              }`}
+            >
               {msg.sender === 'ai' && (
                 <div className="chat-message-avatar" aria-hidden="true">
                   AM
@@ -208,11 +213,10 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
                   >
                     <Volume2
                       size={13}
-                      className="chat-tts-btn-icon"
-                      style={{ color: isSpeaking ? 'var(--color-accent)' : 'inherit' }}
+                      className={`chat-tts-btn-icon${isSpeaking ? ' chat-tts-btn-icon-speaking' : ''}`}
                       aria-hidden="true"
                     />
-                    <span style={{ fontSize: '10px' }}>{isSpeaking ? 'Stop speaking' : 'Read aloud'}</span>
+                    <span className="chat-tts-btn-label">{isSpeaking ? 'Stop speaking' : 'Read aloud'}</span>
                   </button>
                 )}
               </div>
@@ -288,8 +292,8 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
       {/* 2. Wayfinding Route Planner */}
       <div className="glass-panel">
         <div className="wayfinder-header">
-          <Compass size={18} style={{ color: 'var(--color-primary)' }} aria-hidden="true" />
-          <h3 style={{ fontSize: '16px', fontWeight: 600 }}>Stadium Wayfinder</h3>
+          <Compass size={18} className="icon-primary" aria-hidden="true" />
+          <h3 className="panel-heading">Stadium Wayfinder</h3>
         </div>
 
         <form onSubmit={handleGetRoute} className="wayfinder-form">
@@ -331,7 +335,7 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
           </div>
 
           <div className="wayfinder-submit-row">
-            <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={routeLoading}>
+            <button type="submit" className="btn btn-primary wayfinder-submit-btn" disabled={routeLoading}>
               {routeLoading ? 'Calculating Path...' : 'Find Route'}
             </button>
             {route && (
@@ -375,8 +379,8 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
       {/* 3. Sustainability Carbon Tracker */}
       <div className="glass-panel">
         <div className="transit-calculator-header">
-          <TreePine size={18} style={{ color: 'var(--color-success)' }} aria-hidden="true" />
-          <h3 style={{ fontSize: '16px', fontWeight: 600 }}>Green Matchday Transit Calculator</h3>
+          <TreePine size={18} className="icon-success" aria-hidden="true" />
+          <h3 className="panel-heading">Green Matchday Transit Calculator</h3>
         </div>
 
         <div className="transit-calculator-row">
@@ -410,7 +414,7 @@ export const FanCompanion: React.FC<FanCompanionProps> = ({
           </div>
         </div>
 
-        <button onClick={calculateCO2} className="btn btn-accent" style={{ color: 'var(--bg-primary)' }}>
+        <button onClick={calculateCO2} className="btn btn-accent btn-accent-text">
           Calculate My Offset
         </button>
 

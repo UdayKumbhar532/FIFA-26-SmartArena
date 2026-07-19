@@ -35,12 +35,12 @@ function sanitiseInput(raw: string): string {
 }
 
 /**
- * Runtime type guard for `ParsedIncident`.
+ * Runtime type guard for `Omit<ParsedIncident, 'id'>`.
  * Validates that a value decoded from JSON has the expected shape before it is
  * cast to the TypeScript type, preventing runtime errors from malformed LLM
  * output.
  */
-function isParsedIncident(value: unknown): value is ParsedIncident {
+function isParsedIncident(value: unknown): value is Omit<ParsedIncident, 'id'> {
   if (!value || typeof value !== 'object') return false;
   const v = value as Record<string, unknown>;
   return (
@@ -163,7 +163,7 @@ export async function chatWithAI(
 export async function parseIncidentReport(
   report: string,
   apiKey?: string,
-): Promise<ParsedIncident> {
+): Promise<Omit<ParsedIncident, 'id'>> {
   const safeReport = sanitiseInput(report);
   const model = getGeminiModel(apiKey);
 
@@ -308,7 +308,7 @@ function simulateChatResponse(prompt: string, context: string): string {
   return `Welcome to the FIFA World Cup 2026 Smart Stadium portal! Currently, crowd levels are ${context.includes('congested') ? 'higher than average' : 'normal'}. Please let me know how I can help with stadium navigation, transportation, accessibility, or food selections.`;
 }
 
-function simulateIncidentParsing(report: string): ParsedIncident {
+function simulateIncidentParsing(report: string): Omit<ParsedIncident, 'id'> {
   const r = report.toLowerCase();
 
   let category: ParsedIncident['category'] = 'Other';
